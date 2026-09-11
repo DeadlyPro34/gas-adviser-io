@@ -1,7 +1,7 @@
 # Gas Adviser IO ⛽
 > Your intelligent DeFi Gas Fee Predictor & Timing Optimization Platform
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/DeadlyPro34/Carbon-Emissions-Agent)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/DeadlyPro34/gas-adviser-io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
 [![React](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB?logo=react&logoColor=white)]()
@@ -157,8 +157,8 @@ gas-adviser-io/
 ### Step 1: Clone Repository
 
 ```bash
-git clone https://github.com/DeadlyPro34/Carbon-Emissions-Agent.git
-cd Carbon-Emissions-Agent/gas-adviser-io
+git clone https://github.com/DeadlyPro34/gas-adviser-io.git
+cd gas-adviser-io
 ```
 
 ### Step 2: Install Dependencies
