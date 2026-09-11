@@ -1,9 +1,20 @@
 const axios = require('axios');
 
+// Etherscan API V2 base URL (V1 is deprecated)
 const ETHERSCAN_API_URL = 'https://api.etherscan.io/v2/api';
 
 /**
- * Fetches current gas prices from the Etherscan Gas Oracle endpoint.
+ * Format Gwei values to clean numeric representation:
+ * If < 1 Gwei, keep 2-3 decimal places (e.g. 0.06); if >= 1 Gwei, keep 1 decimal place (e.g. 18.2)
+ */
+function cleanGwei(val) {
+  const num = parseFloat(val);
+  if (isNaN(num)) return 0;
+  return num < 1 ? Number(num.toFixed(3)) : Number(num.toFixed(1));
+}
+
+/**
+ * Fetches current gas prices from the Etherscan Gas Oracle V2 endpoint.
  * @returns {{ safeGwei: number, proposeGwei: number, fastGwei: number } | null}
  *   Parsed gwei values, or null if the request failed.
  */
@@ -17,7 +28,7 @@ async function fetchGasPrices() {
 
     const response = await axios.get(ETHERSCAN_API_URL, {
       params: {
-        chainid: 1, // Ethereum Mainnet (required for V2)
+        chainid: 1, // Ethereum Mainnet
         module: 'gastracker',
         action: 'gasoracle',
         apikey: apiKey,
@@ -35,9 +46,9 @@ async function fetchGasPrices() {
     const { SafeGasPrice, ProposeGasPrice, FastGasPrice } = data.result;
 
     return {
-      safeGwei: parseFloat(SafeGasPrice),
-      proposeGwei: parseFloat(ProposeGasPrice),
-      fastGwei: parseFloat(FastGasPrice),
+      safeGwei: cleanGwei(SafeGasPrice),
+      proposeGwei: cleanGwei(ProposeGasPrice),
+      fastGwei: cleanGwei(FastGasPrice),
     };
   } catch (err) {
     console.error('[etherscan] Failed to fetch gas prices:', err.message);
@@ -45,4 +56,4 @@ async function fetchGasPrices() {
   }
 }
 
-module.exports = { fetchGasPrices };
+module.exports = { fetchGasPrices, cleanGwei };

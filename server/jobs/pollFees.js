@@ -12,9 +12,7 @@ const { checkAndTriggerAlerts } = require('../helpers/alertHelper');
  * @param {import('socket.io').Server} io  The Socket.io server instance.
  */
 function startPolling(io) {
-  // node-cron supports seconds when using 6-field expressions
-  // "*/20 * * * * *" = every 20 seconds
-  const task = cron.schedule('*/20 * * * * *', async () => {
+  const runPollCycle = async () => {
     try {
       const prices = await fetchGasPrices();
 
@@ -66,7 +64,14 @@ function startPolling(io) {
     } catch (err) {
       console.error('[pollFees] Error during poll cycle:', err.message);
     }
-  });
+  };
+
+  // Immediate poll on server start
+  runPollCycle();
+
+  // node-cron supports seconds when using 6-field expressions
+  // "*/20 * * * * *" = every 20 seconds
+  const task = cron.schedule('*/20 * * * * *', runPollCycle);
 
   console.log('[pollFees] Cron job started — polling every 20 seconds.');
   return task;
