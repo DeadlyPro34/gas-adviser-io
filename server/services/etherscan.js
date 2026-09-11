@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const ETHERSCAN_API_URL = 'https://api.etherscan.io/api';
+const ETHERSCAN_API_URL = 'https://api.etherscan.io/v2/api';
 
 /**
  * Fetches current gas prices from the Etherscan Gas Oracle endpoint.
@@ -17,6 +17,7 @@ async function fetchGasPrices() {
 
     const response = await axios.get(ETHERSCAN_API_URL, {
       params: {
+        chainid: 1, // Ethereum Mainnet (required for V2)
         module: 'gastracker',
         action: 'gasoracle',
         apikey: apiKey,
