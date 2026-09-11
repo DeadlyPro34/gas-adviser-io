@@ -45,16 +45,6 @@
 
 ---
 
-## 🌐 Demo
-
-**Live Demo:**  
-*[Insert Live URL Here]*
-
-**Video Demo:**  
-*[Insert YouTube/Loom Link Here]*
-
----
-
 ## ✨ Features
 
 ### Core Features
