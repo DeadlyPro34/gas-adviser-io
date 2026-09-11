@@ -6,68 +6,106 @@
 
 :root {
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  color-scheme: light dark;
 }
 
-body {
-  background-color: #080c14;
-  color: #f1f5f9;
+/* Light theme default / fallback */
+html.light, html.light body, html:not(.dark), html:not(.dark) body {
+  background-color: #f8f9fa;
+  color: #09090b;
   min-height: 100vh;
   overflow-x: hidden;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
-/* Glassmorphism utilities */
-.glass-card {
-  background: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+/* Dark theme */
+html.dark, html.dark body {
+  background-color: #09090b;
+  color: #f4f4f5;
+  min-height: 100vh;
+  overflow-x: hidden;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
-.glass-card-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* Shadcn Card & Surface styles - Light Mode */
+.shadcn-card {
+  background-color: #ffffff;
+  border: 1px solid #e4e4e7;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+  border-radius: 0.875rem;
+  color: #09090b;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
-.glass-card-hover:hover {
-  border-color: rgba(99, 102, 241, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 30px -10px rgba(79, 70, 229, 0.15);
+/* Shadcn Card & Surface styles - Dark Mode */
+html.dark .shadcn-card {
+  background-color: #0f0f12;
+  border: 1px solid #1f1f23;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  color: #f4f4f5;
 }
 
-.glass-input {
-  background: rgba(11, 15, 25, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(8px);
-  color: #f8fafc;
+.shadcn-card-subtle {
+  background-color: #f4f4f5;
+  border: 1px solid #e4e4e7;
+  color: #09090b;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
-.glass-input:focus {
+html.dark .shadcn-card-subtle {
+  background-color: #141417;
+  border: 1px solid #232328;
+  color: #f4f4f5;
+}
+
+/* Shadcn Inputs */
+.shadcn-input {
+  background-color: #ffffff;
+  border: 1px solid #e4e4e7;
+  color: #09090b;
+  transition: all 0.15s ease-in-out;
+}
+
+html.dark .shadcn-input {
+  background-color: #141417;
+  border: 1px solid #27272a;
+  color: #f4f4f5;
+}
+
+.shadcn-input:focus {
   outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+  border-color: #71717a;
+  box-shadow: 0 0 0 1px #71717a;
+}
+
+/* Dotted divider */
+.dotted-divider {
+  border-bottom: 1px dashed #e4e4e7;
+}
+
+html.dark .dotted-divider {
+  border-bottom: 1px dashed #222226;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #0b0f19;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #cbd5e1;
   border-radius: 9999px;
 }
+html.dark ::-webkit-scrollbar-thumb {
+  background: #27272a;
+}
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #94a3b8;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
 }
 
-/* Pulse animation keyframes */
-@keyframes glowPulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.9; }
-}
-
-.animate-glow {
-  animation: glowPulse 3s infinite ease-in-out;
-}
