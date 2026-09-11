@@ -83,6 +83,90 @@ The frontend will start on `http://localhost:5173`.
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/health` | Backend status & database connection state |
+| `GET` | `/api/fees/current` | Latest gas fee reading with 24h percentile label |
+| `GET` | `/api/fees/history?hours=N` | Historical readings from the last N hours (default 24) |
+
+---
+
+## 🧪 API Examples (curl)
+
+### Health Check
+```bash
+curl http://localhost:5000/api/health
+```
+```json
+{
+  "status": "ok",
+  "message": "DeFi Fee & Timing Predictor Backend is running.",
+  "timestamp": "2026-09-10T23:22:00.000Z",
+  "dbState": "connected"
+}
+```
+
+### Get Current Fee (with Percentile Label)
+```bash
+curl http://localhost:5000/api/fees/current
+```
+```json
+{
+  "_id": "664f1a2b3c4d5e6f7a8b9c0d",
+  "timestamp": "2026-09-10T23:20:00.000Z",
+  "chain": "ethereum",
+  "safeGwei": 15,
+  "proposeGwei": 20,
+  "fastGwei": 25,
+  "__v": 0,
+  "percentile": 60,
+  "label": "normal"
+}
+```
+The `label` field is computed from the 24-hour percentile of `proposeGwei`:
+- **`"low"`** — percentile < 33 (cheaper than most recent readings — good time to transact)
+- **`"normal"`** — percentile 33–67 (average range)
+- **`"high"`** — percentile > 67 (more expensive than most recent readings — consider waiting)
+
+### Get Fee History (last N hours)
+```bash
+# Default: last 24 hours
+curl http://localhost:5000/api/fees/history
+
+# Last 6 hours
+curl "http://localhost:5000/api/fees/history?hours=6"
+```
+```json
+[
+  {
+    "_id": "664f19003c4d5e6f7a8b9c01",
+    "timestamp": "2026-09-10T17:00:00.000Z",
+    "chain": "ethereum",
+    "safeGwei": 12,
+    "proposeGwei": 18,
+    "fastGwei": 22,
+    "__v": 0
+  },
+  {
+    "_id": "664f1a2b3c4d5e6f7a8b9c0d",
+    "timestamp": "2026-09-10T23:20:00.000Z",
+    "chain": "ethereum",
+    "safeGwei": 15,
+    "proposeGwei": 20,
+    "fastGwei": 25,
+    "__v": 0
+  }
+]
+```
+Results are sorted oldest → newest for direct use in charting libraries like Recharts.
+
+---
+
+## 🧪 Running Tests
+
+```bash
+cd server
+npm test
+```
+
+Tests use Node.js built-in `node:test` runner and verify the percentile computation logic.
 
 ---
 
