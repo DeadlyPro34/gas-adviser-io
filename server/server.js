@@ -6,6 +6,8 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { startPolling } = require('./jobs/pollFees');
 const { computeFeePercentile } = require('./helpers/feeHelper');
+const authRoutes = require('./routes/authRoutes');
+const authMiddleware = require('./middleware/authMiddleware');
 
 dotenv.config();
 
@@ -24,6 +26,9 @@ const io = new Server(httpServer, {
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// ─── Auth Routes ──────────────────────────────────────────────────────────────
+app.use('/api/auth', authRoutes);
 
 // ─── In-Memory Fallback Store ─────────────────────────────────────────────────
 // Used when MongoDB is unavailable. Seeded with 24h of realistic mock data.
@@ -195,14 +200,16 @@ app.get('/api/fees/history', async (req, res) => {
   }
 });
 
-// ─── Alerts API — GET ─────────────────────────────────────────────────────────
-app.get('/api/alerts', async (req, res) => {
+// ─── Alerts API — GET (auth-protected, scoped to user) ────────────────────────
+app.get('/api/alerts', authMiddleware, async (req, res) => {
   try {
+    const userId = req.user.userId;
     if (!dbReady) {
-      return res.status(200).json([...memAlerts].reverse());
+      const userAlerts = memAlerts.filter((a) => a.userId === userId);
+      return res.status(200).json([...userAlerts].reverse());
     }
     const UserAlert = require('./models/UserAlert');
-    const alerts = await UserAlert.find().sort({ createdAt: -1 }).lean();
+    const alerts = await UserAlert.find({ userId }).sort({ createdAt: -1 }).lean();
     return res.status(200).json(alerts);
   } catch (err) {
     console.error('[GET /api/alerts] Error:', err.message);
@@ -210,9 +217,10 @@ app.get('/api/alerts', async (req, res) => {
   }
 });
 
-// ─── Alerts API — POST ────────────────────────────────────────────────────────
-app.post('/api/alerts', async (req, res) => {
+// ─── Alerts API — POST (auth-protected, stamps userId) ────────────────────────
+app.post('/api/alerts', authMiddleware, async (req, res) => {
   try {
+    const userId = req.user.userId;
     const { chain, thresholdGwei } = req.body;
     if (thresholdGwei == null || typeof thresholdGwei !== 'number' || thresholdGwei <= 0) {
       return res.status(400).json({ error: 'thresholdGwei is required and must be a positive number.' });
@@ -221,19 +229,20 @@ app.post('/api/alerts', async (req, res) => {
     if (!dbReady) {
       const newAlert = {
         _id: `mem-alert-${Date.now()}`,
+        userId,
         chain: chain || 'ethereum',
         thresholdGwei,
         createdAt: new Date(),
         triggered: false,
       };
       memAlerts.push(newAlert);
-      console.log(`[alerts] ✅ In-memory alert created — ${newAlert.chain} ≤ ${thresholdGwei} Gwei`);
+      console.log(`[alerts] ✅ In-memory alert created — ${newAlert.chain} ≤ ${thresholdGwei} Gwei (user: ${userId})`);
       return res.status(201).json(newAlert);
     }
 
     const UserAlert = require('./models/UserAlert');
-    const alert = await UserAlert.create({ chain: chain || 'ethereum', thresholdGwei });
-    console.log(`[alerts] ✅ Alert created — chain: ${alert.chain}, threshold: ${alert.thresholdGwei} Gwei`);
+    const alert = await UserAlert.create({ userId, chain: chain || 'ethereum', thresholdGwei });
+    console.log(`[alerts] ✅ Alert created — chain: ${alert.chain}, threshold: ${alert.thresholdGwei} Gwei (user: ${userId})`);
     return res.status(201).json(alert);
   } catch (err) {
     console.error('[POST /api/alerts] Error:', err.message);
@@ -241,22 +250,23 @@ app.post('/api/alerts', async (req, res) => {
   }
 });
 
-// ─── Alerts API — DELETE ──────────────────────────────────────────────────────
-app.delete('/api/alerts/:id', async (req, res) => {
+// ─── Alerts API — DELETE (auth-protected, ownership check) ───────────────────
+app.delete('/api/alerts/:id', authMiddleware, async (req, res) => {
   try {
+    const userId = req.user.userId;
     const { id } = req.params;
 
     if (!dbReady) {
-      const idx = memAlerts.findIndex((a) => a._id === id);
+      const idx = memAlerts.findIndex((a) => a._id === id && a.userId === userId);
       if (idx === -1) return res.status(404).json({ error: 'Alert not found.' });
       memAlerts.splice(idx, 1);
       return res.status(200).json({ message: 'Alert deleted.', id });
     }
 
     const UserAlert = require('./models/UserAlert');
-    const deleted = await UserAlert.findByIdAndDelete(id);
+    const deleted = await UserAlert.findOneAndDelete({ _id: id, userId });
     if (!deleted) return res.status(404).json({ error: 'Alert not found.' });
-    console.log(`[alerts] 🗑️ Alert deleted — ID: ${id}`);
+    console.log(`[alerts] 🗑️ Alert deleted — ID: ${id} (user: ${userId})`);
     return res.status(200).json({ message: 'Alert deleted successfully.', id });
   } catch (err) {
     console.error('[DELETE /api/alerts/:id] Error:', err.message);
