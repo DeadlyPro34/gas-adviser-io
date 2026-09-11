@@ -41,6 +41,9 @@ export default function FeeGauge({ feeData, livePulse }) {
     }
   };
 
+  const config = getLabelConfig(label);
+  const LabelIcon = config.icon;
+
   const formatDisplayGwei = (val) => {
     if (val == null) return '--';
     return typeof val === 'number' ? (val < 1 ? val.toFixed(3) : val.toFixed(1)) : val;
