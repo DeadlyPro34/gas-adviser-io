@@ -181,7 +181,7 @@ app.get('/api/fees/current', async (req, res) => {
 // ─── Fee API — history ────────────────────────────────────────────────────────
 app.get('/api/fees/history', async (req, res) => {
   try {
-    const hours = Math.max(1, parseInt(req.query.hours, 10) || 24);
+    const hours = Math.min(168, Math.max(1, parseInt(req.query.hours, 10) || 24));
     const since = new Date(Date.now() - hours * 60 * 60 * 1000);
 
     if (!dbReady) {
@@ -224,6 +224,21 @@ app.post('/api/alerts', authMiddleware, async (req, res) => {
     const { chain, thresholdGwei } = req.body;
     if (thresholdGwei == null || typeof thresholdGwei !== 'number' || thresholdGwei <= 0) {
       return res.status(400).json({ error: 'thresholdGwei is required and must be a positive number.' });
+    }
+
+    // ── Per-user alert cap (max 10 active alerts) ──
+    const MAX_ALERTS = 10;
+    if (!dbReady) {
+      const count = memAlerts.filter((a) => a.userId === userId && !a.triggered).length;
+      if (count >= MAX_ALERTS) {
+        return res.status(429).json({ error: `You can have at most ${MAX_ALERTS} active alerts.` });
+      }
+    } else {
+      const UserAlert = require('./models/UserAlert');
+      const count = await UserAlert.countDocuments({ userId, triggered: false });
+      if (count >= MAX_ALERTS) {
+        return res.status(429).json({ error: `You can have at most ${MAX_ALERTS} active alerts.` });
+      }
     }
 
     if (!dbReady) {
