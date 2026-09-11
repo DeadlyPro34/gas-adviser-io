@@ -70,6 +70,11 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  // ── Update User ──────────────────────────────────────────────────────────
+  const updateUser = useCallback((updatedUserData) => {
+    setUser((prev) => (prev ? { ...prev, ...updatedUserData } : updatedUserData));
+  }, []);
+
   const value = {
     user,
     token,
@@ -78,6 +83,7 @@ export function AuthProvider({ children }) {
     login,
     register,
     logout,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

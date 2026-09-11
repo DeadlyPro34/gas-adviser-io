@@ -248,4 +248,68 @@ router.get('/me', authMiddleware, async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// PUT /api/auth/profile (Protected)
+// ═══════════════════════════════════════════════════════════════════════════════
+router.put('/profile', authMiddleware, async (req, res) => {
+  try {
+    const { fullName } = req.body;
+    if (!fullName || fullName.trim().length < 2) {
+      return res.status(400).json({ error: 'Full name must be at least 2 characters.' });
+    }
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    user.fullName = fullName.trim();
+    await user.save();
+
+    console.log(`[auth] 👤 Profile updated — ${user.email} (${user.fullName})`);
+    return res.status(200).json({
+      message: 'Profile updated successfully.',
+      user: user.toJSON(),
+    });
+  } catch (err) {
+    console.error('[PUT /api/auth/profile] Error:', err.message);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PUT /api/auth/change-password (Protected)
+// ═══════════════════════════════════════════════════════════════════════════════
+router.put('/change-password', authMiddleware, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password are required.' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+    }
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({ error: 'Incorrect current password.' });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    console.log(`[auth] 🔐 Password changed successfully — ${user.email}`);
+    return res.status(200).json({ message: 'Password updated successfully.' });
+  } catch (err) {
+    console.error('[PUT /api/auth/change-password] Error:', err.message);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
 module.exports = router;
