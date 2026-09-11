@@ -17,7 +17,128 @@ const TIMEFRAMES = [
   { label: '24H', hours: 24 },
 ];
 
-export default function FeeChart({ historyData, onTimeframeChange, currentHours = 24, isDark = true }) {
+/* ── inline styles matching the exact spec ── */
+const cardStyle = {
+  background: '#fff',
+  border: '0.5px solid #e5e5e5',
+  borderRadius: 16,
+  padding: '20px 24px',
+  boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+};
+
+const pillGroupStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 4,
+};
+
+const pillBase = {
+  borderRadius: 6,
+  padding: '4px 10px',
+  fontSize: 12,
+  fontWeight: 500,
+  border: 'none',
+  cursor: 'pointer',
+  transition: 'all 0.2s ease',
+  lineHeight: 1.4,
+};
+
+const pillInactive = {
+  ...pillBase,
+  background: '#f5f5f5',
+  color: '#888',
+};
+
+const pillActive = {
+  ...pillBase,
+  background: '#111',
+  color: '#fff',
+};
+
+const formatGwei = (val) => {
+  if (val == null || typeof val !== 'number') return val;
+  return val < 1 ? val.toFixed(3) : val.toFixed(1);
+};
+
+/* ── Custom Tooltip ── */
+const CustomChartTooltip = ({ active, payload }) => {
+  if (!active || !payload || !payload.length) return null;
+  const data = payload[0].payload;
+
+  return (
+    <div
+      style={{
+        background: '#fff',
+        border: '0.5px solid #e0e0e0',
+        borderRadius: 10,
+        padding: '10px 14px',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+        fontSize: 12,
+        minWidth: 180,
+      }}
+    >
+      <div style={{ color: '#888', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+        <Clock style={{ width: 12, height: 12 }} />
+        {data.fullTime}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ color: '#666' }}>Propose (Standard)</span>
+          <span style={{ color: '#00C9A7', fontWeight: 600, textAlign: 'right' }}>
+            {formatGwei(data.proposeGwei)} Gwei
+          </span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ color: '#666' }}>Fast (Priority)</span>
+          <span style={{ color: '#555', fontWeight: 500, textAlign: 'right' }}>
+            {formatGwei(data.fastGwei)} Gwei
+          </span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ color: '#666' }}>Safe (Slow)</span>
+          <span style={{ color: '#00A86B', fontWeight: 500, textAlign: 'right' }}>
+            {formatGwei(data.safeGwei)} Gwei
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ── Custom Crosshair Cursor ── */
+const CustomCursor = ({ points, height }) => {
+  if (!points || !points.length) return null;
+  const { x } = points[0];
+  return (
+    <line
+      x1={x}
+      y1={0}
+      x2={x}
+      y2={height}
+      stroke="#ccc"
+      strokeWidth={1}
+      strokeDasharray="4,2"
+    />
+  );
+};
+
+/* ── Custom Active Dot (filled circle on hover) ── */
+const ActiveDot = ({ cx, cy, fill }) => {
+  if (cx == null || cy == null) return null;
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={4}
+      fill={fill}
+      stroke="#fff"
+      strokeWidth={2}
+      style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.15))' }}
+    />
+  );
+};
+
+export default function FeeChart({ historyData, onTimeframeChange, currentHours = 24 }) {
   const [selectedHours, setSelectedHours] = useState(currentHours);
 
   const formattedData = useMemo(() => {
@@ -42,61 +163,31 @@ export default function FeeChart({ historyData, onTimeframeChange, currentHours 
     }
   };
 
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="shadcn-card p-3 shadow-2xl text-xs space-y-1.5 min-w-[170px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#0f0f12]">
-          <p className="text-zinc-500 dark:text-zinc-400 font-medium flex items-center gap-1.5">
-            <Clock className="w-3 h-3 text-zinc-400" />
-            {data.fullTime}
-          </p>
-          <div className="dotted-divider pt-1.5 space-y-1">
-            <div className="flex justify-between items-center text-zinc-600 dark:text-zinc-400">
-              <span>Fast (Priority):</span>
-              <span className="font-semibold text-zinc-800 dark:text-zinc-200">
-                {typeof data.fastGwei === 'number' ? (data.fastGwei < 1 ? data.fastGwei.toFixed(3) : data.fastGwei.toFixed(1)) : data.fastGwei} Gwei
-              </span>
-            </div>
-            <div className="flex justify-between items-center text-zinc-900 dark:text-white font-bold">
-              <span>Propose (Market):</span>
-              <span className="font-bold text-sky-500 dark:text-sky-400">
-                {typeof data.proposeGwei === 'number' ? (data.proposeGwei < 1 ? data.proposeGwei.toFixed(3) : data.proposeGwei.toFixed(1)) : data.proposeGwei} Gwei
-              </span>
-            </div>
-            <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400">
-              <span>Safe (Slow):</span>
-              <span className="font-medium">
-                {typeof data.safeGwei === 'number' ? (data.safeGwei < 1 ? data.safeGwei.toFixed(3) : data.safeGwei.toFixed(1)) : data.safeGwei} Gwei
-              </span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return null;
+  /* Determine badge color based on label */
+  const getBadgeStyle = (label) => {
+    const l = (label || '').toLowerCase();
+    if (l === 'low') return { background: '#E6FBF5', color: '#0A9B72', border: '0.5px solid #0A9B72' };
+    if (l === 'normal') return { background: '#E6F0FB', color: '#2563EB', border: '0.5px solid #2563EB' };
+    if (l === 'high') return { background: '#FEF3E6', color: '#D97706', border: '0.5px solid #D97706' };
+    return { background: '#E6FBF5', color: '#0A9B72', border: '0.5px solid #0A9B72' };
   };
 
   return (
-    <div className="shadcn-card p-6 space-y-5">
-      {/* Top Header Label */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-          <TrendingUp className="w-3.5 h-3.5 text-zinc-400" />
-          <span className="tracking-tight text-zinc-800 dark:text-zinc-300">Gas Fee Trends Overview</span>
+    <div style={cardStyle}>
+      {/* ── Header Row ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 500, color: '#555' }}>
+          <TrendingUp style={{ width: 14, height: 14, color: '#888' }} />
+          <span>Gas Fee Trends Overview</span>
         </div>
 
-        {/* Segmented Timeframe Selector */}
-        <div className="flex items-center bg-zinc-100 dark:bg-zinc-900/90 p-1 rounded-lg border border-zinc-200 dark:border-zinc-800">
+        {/* Pill group */}
+        <div style={pillGroupStyle}>
           {TIMEFRAMES.map((tf) => (
             <button
               key={tf.hours}
               onClick={() => handleSelectHours(tf.hours)}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
-                selectedHours === tf.hours
-                  ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm font-bold'
-                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-zinc-850'
-              }`}
+              style={selectedHours === tf.hours ? pillActive : pillInactive}
             >
               {tf.label}
             </button>
@@ -104,59 +195,94 @@ export default function FeeChart({ historyData, onTimeframeChange, currentHours 
         </div>
       </div>
 
-      {/* Main Metric Stat */}
-      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pb-2">
+      {/* ── Market Rate Display ── */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 16 }}>
         <div>
-          <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium block">
+          <div style={{ fontSize: 11, color: '#888', fontWeight: 500, marginBottom: 4 }}>
             Market Propose Rate
-          </span>
-          <div className="flex items-baseline gap-2.5 mt-1">
-            <span className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
-              {latest ? `${typeof latest.proposeGwei === 'number' ? (latest.proposeGwei < 1 ? latest.proposeGwei.toFixed(3) : latest.proposeGwei.toFixed(1)) : latest.proposeGwei} Gwei` : '0.060 Gwei'}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+            <span style={{ fontSize: 28, fontWeight: 700, color: '#111', letterSpacing: '-0.5px' }}>
+              {latest ? `${formatGwei(latest.proposeGwei)} Gwei` : '0.060 Gwei'}
             </span>
             {latest && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+              <span
+                style={{
+                  ...getBadgeStyle(latest.label),
+                  borderRadius: 999,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: '3px 10px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  lineHeight: 1.4,
+                }}
+              >
                 {latest.label ? `${latest.label.toUpperCase()} · ${latest.percentile || 50}th percentile` : 'Live'}
               </span>
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-900/80 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 self-start sm:self-auto">
-          <span>Range: Last {selectedHours} Hours</span>
+        {/* Range Label */}
+        <div
+          style={{
+            border: '0.5px solid #e0e0e0',
+            borderRadius: 6,
+            padding: '4px 12px',
+            fontSize: 12,
+            color: '#555',
+            background: '#fff',
+          }}
+        >
+          Range: Last {selectedHours} Hours
         </div>
       </div>
 
-      {/* Recharts Area/Line Chart matching reference image */}
-      <div className="h-[270px] w-full pt-1">
+      {/* ── Chart ── */}
+      <div style={{ height: 270, width: '100%' }}>
         {formattedData.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-zinc-500 text-xs">
+          <div
+            style={{
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#999',
+              fontSize: 12,
+            }}
+          >
             No historical fee data available for this range.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={formattedData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
               <defs>
-                <linearGradient id="proposeShadcn" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
+                <linearGradient id="proposeAreaFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#00C9A7" stopOpacity={0.12} />
+                  <stop offset="95%" stopColor="#00C9A7" stopOpacity={0} />
                 </linearGradient>
               </defs>
+
+              {/* Horizontal grid only */}
               <CartesianGrid
-                strokeDasharray="3 3"
-                stroke={isDark ? '#27272a' : '#e4e4e7'}
+                stroke="#f0f0f0"
+                strokeWidth={1}
                 vertical={false}
               />
+
+              {/* X-Axis — monospace time */}
               <XAxis
                 dataKey="timeLabel"
-                stroke={isDark ? '#71717a' : '#a1a1aa'}
-                tick={{ fontSize: 11, fill: isDark ? '#71717a' : '#a1a1aa' }}
+                tick={{ fontSize: 11, fill: '#aaa', fontFamily: 'monospace' }}
                 axisLine={false}
                 tickLine={false}
               />
+
+              {/* Y-Axis — monospace values */}
               <YAxis
-                stroke={isDark ? '#71717a' : '#a1a1aa'}
-                tick={{ fontSize: 11, fill: isDark ? '#71717a' : '#a1a1aa' }}
+                tick={{ fontSize: 11, fill: '#aaa', fontFamily: 'monospace' }}
                 axisLine={false}
                 tickLine={false}
                 domain={['auto', 'auto']}
@@ -164,60 +290,93 @@ export default function FeeChart({ historyData, onTimeframeChange, currentHours 
                   if (val == null) return '';
                   return val < 1 ? `${val.toFixed(3)}` : `${val.toFixed(1)}`;
                 }}
-                width={45}
+                width={48}
               />
-              <Tooltip content={<CustomTooltip />} />
-              {/* Dashed Secondary Line (Fast Gwei) */}
+
+              {/* Tooltip with custom crosshair */}
+              <Tooltip
+                content={<CustomChartTooltip />}
+                cursor={<CustomCursor />}
+              />
+
+              {/* Fast (Priority) — dashed gray */}
               <Area
                 type="monotone"
                 dataKey="fastGwei"
-                stroke="#a1a1aa"
+                stroke="#888"
                 strokeWidth={1.5}
-                strokeDasharray="4 4"
-                fill="transparent"
+                strokeDasharray="5,3"
+                fill="none"
                 name="Fast Gwei"
+                dot={false}
+                activeDot={<ActiveDot fill="#888" />}
               />
-              {/* Solid Primary Line (Propose Gwei) */}
+
+              {/* Propose (Standard) — solid teal with area fill */}
               <Area
                 type="monotone"
                 dataKey="proposeGwei"
-                stroke="#38bdf8"
+                stroke="#00C9A7"
                 strokeWidth={2.5}
-                fill="url(#proposeShadcn)"
+                fill="url(#proposeAreaFill)"
                 name="Propose Gwei"
+                dot={false}
+                activeDot={<ActiveDot fill="#00C9A7" />}
               />
-              {/* Safe low line */}
+
+              {/* Safe (Slow) — short dashes green */}
               <Area
                 type="monotone"
                 dataKey="safeGwei"
-                stroke="#10b981"
+                stroke="#00A86B"
                 strokeWidth={1.5}
-                fill="transparent"
+                strokeDasharray="3,2"
+                fill="none"
                 name="Safe Gwei"
+                dot={false}
+                activeDot={<ActiveDot fill="#00A86B" />}
               />
             </AreaChart>
           </ResponsiveContainer>
         )}
       </div>
 
-      {/* Minimal Bottom Legend */}
-      <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 pt-3 dotted-divider">
-        <div className="flex items-center gap-5">
-          <div className="flex items-center gap-2">
-            <span className="w-4 h-0.5 bg-sky-500 dark:bg-sky-400 inline-block rounded"></span>
-            <span className="text-zinc-800 dark:text-zinc-200 font-medium">Propose (Standard)</span>
+      {/* ── Legend ── */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingTop: 14,
+          borderTop: '1px solid #f0f0f0',
+          marginTop: 8,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {/* Propose legend */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#666' }}>
+            <svg width="20" height="2" style={{ display: 'block' }}>
+              <line x1="0" y1="1" x2="20" y2="1" stroke="#00C9A7" strokeWidth="2.5" />
+            </svg>
+            <span style={{ fontWeight: 500 }}>Propose (Standard)</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-4 h-0.5 border-t-2 border-dashed border-zinc-400 inline-block"></span>
+          {/* Fast legend */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#666' }}>
+            <svg width="20" height="2" style={{ display: 'block' }}>
+              <line x1="0" y1="1" x2="20" y2="1" stroke="#888" strokeWidth="1.5" strokeDasharray="5,3" />
+            </svg>
             <span>Fast (Priority)</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-4 h-0.5 bg-emerald-500 dark:bg-emerald-400 inline-block rounded"></span>
+          {/* Safe legend */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#666' }}>
+            <svg width="20" height="2" style={{ display: 'block' }}>
+              <line x1="0" y1="1" x2="20" y2="1" stroke="#00A86B" strokeWidth="1.5" strokeDasharray="3,2" />
+            </svg>
             <span>Safe (Slow)</span>
           </div>
         </div>
 
-        <span className="text-[11px] text-zinc-400 dark:text-zinc-500 hidden sm:inline">
+        <span style={{ fontSize: 11, color: '#aaa' }}>
           Updated live via WebSocket
         </span>
       </div>
