@@ -1,4 +1,6 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
@@ -11,9 +13,27 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// ─── Create HTTP server and attach Socket.io ─────────────────────────────────
+const httpServer = http.createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    methods: ['GET', 'POST'],
+  },
+});
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// ─── Socket.io connection logging ────────────────────────────────────────────
+io.on('connection', (socket) => {
+  console.log(`[socket.io] 🟢 Client connected — id: ${socket.id}`);
+
+  socket.on('disconnect', (reason) => {
+    console.log(`[socket.io] 🔴 Client disconnected — id: ${socket.id}, reason: ${reason}`);
+  });
+});
 
 // MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/defi-gas-predictor';
@@ -23,7 +43,7 @@ mongoose
   .then(() => {
     console.log(' Connected to MongoDB successfully.');
     // Start polling Etherscan for gas prices once DB is ready
-    startPolling();
+    startPolling(io);
   })
   .catch((err) => {
     console.warn(' MongoDB connection warning:', err.message);
@@ -92,6 +112,7 @@ app.get('/api/fees/history', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(` Server running on http://localhost:${PORT}`);
 });
+
