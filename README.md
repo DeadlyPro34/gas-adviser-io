@@ -341,15 +341,3 @@ This project is licensed under the **MIT License**.
 
 ---
 
-## 📫 Contact
-
-**Project Owner:** Akhil  
-**GitHub:** [https://github.com/DeadlyPro34](https://github.com/DeadlyPro34)  
-
----
-
-## 🙏 Acknowledgements
-
-- [Etherscan API](https://etherscan.io/apis) for blockchain metrics.
-- [Tailwind CSS](https://tailwindcss.com/) & [Recharts](https://recharts.org/) for beautiful UI.
-- The open-source Web3 and JavaScript communities.
