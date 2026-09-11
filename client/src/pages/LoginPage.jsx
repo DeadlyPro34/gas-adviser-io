@@ -16,7 +16,6 @@ export default function LoginPage({ onNavigate }) {
     setLoading(true);
     try {
       await login(email, password);
-      // AuthContext updates → App re-renders to dashboard
     } catch (err) {
       setError(err?.response?.data?.error || 'Login failed. Please try again.');
     } finally {
@@ -25,64 +24,64 @@ export default function LoginPage({ onNavigate }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#080c14] flex items-center justify-center px-4 py-12 relative overflow-hidden">
-      {/* ─── Animated Background ─── */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-blue-600/8 rounded-full blur-3xl animate-glow"></div>
-        <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-purple-600/8 rounded-full blur-3xl animate-glow" style={{ animationDelay: '1.5s' }}></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-600/5 rounded-full blur-3xl animate-glow" style={{ animationDelay: '0.8s' }}></div>
-      </div>
-
-      {/* ─── Login Card ─── */}
-      <div className="relative z-10 w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 shadow-2xl shadow-blue-600/30 mb-4">
-            <Activity className="w-8 h-8 text-white" />
+    <div className="min-h-screen bg-zinc-50 dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 flex items-center justify-center px-4 py-12 relative">
+      <div className="w-full max-w-sm">
+        {/* Brand */}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold mb-3 shadow-sm">
+            <Activity className="w-5 h-5" />
           </div>
-          <h1 className="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400">
+          <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">
             Gas Adviser
           </h1>
-          <p className="text-slate-500 text-sm mt-1">Sign in to your dashboard</p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+            Sign in to access Ethereum gas oracle dashboard
+          </p>
         </div>
 
         {/* Form Card */}
-        <div className="glass-card rounded-2xl p-8 border border-slate-800/60 shadow-2xl">
-          {/* Error Alert */}
+        <div className="shadcn-card p-6 shadow-xl">
           {error && (
-            <div className="flex items-center gap-2 bg-rose-500/10 border border-rose-500/25 rounded-xl p-3 mb-6 text-rose-400 text-xs">
+            <div className="flex items-center gap-2 bg-rose-500/10 border border-rose-500/20 rounded-lg p-2.5 mb-4 text-rose-600 dark:text-rose-400 text-xs">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email */}
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-2" htmlFor="login-email">
-                Email Address
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5" htmlFor="login-email">
+                Email
               </label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <input
                   id="login-email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="glass-input w-full pl-11 pr-4 py-3 rounded-xl text-sm placeholder:text-slate-600 transition-all"
+                  className="shadcn-input w-full pl-9 pr-3.5 py-2 rounded-lg text-xs placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none"
                 />
               </div>
             </div>
 
-            {/* Password */}
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-2" htmlFor="login-password">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300" htmlFor="login-password">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => onNavigate('forgot-password')}
+                  className="text-[11px] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer"
+                >
+                  Forgot password?
+                </button>
+              </div>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <input
                   id="login-password"
                   type={showPassword ? 'text' : 'password'}
@@ -91,68 +90,49 @@ export default function LoginPage({ onNavigate }) {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="glass-input w-full pl-11 pr-12 py-3 rounded-xl text-sm placeholder:text-slate-600 transition-all"
+                  className="shadcn-input w-full pl-9 pr-9 py-2 rounded-lg text-xs placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors cursor-pointer"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
               </div>
             </div>
 
-            {/* Forgot Password */}
-            <div className="flex items-center justify-end">
-              <button
-                type="button"
-                onClick={() => onNavigate('forgot-password')}
-                className="text-xs text-blue-400 hover:text-blue-300 transition-colors font-medium cursor-pointer"
-              >
-                Forgot Password?
-              </button>
-            </div>
-
-            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-blue-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 font-semibold text-xs shadow-sm transition-all disabled:opacity-50 cursor-pointer mt-2"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  Sign In
-                  <ArrowRight className="w-4 h-4" />
+                  Sign In with Email
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </>
               )}
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px bg-slate-800"></div>
-            <span className="text-[10px] text-slate-600 uppercase tracking-wider">or</span>
-            <div className="flex-1 h-px bg-slate-800"></div>
-          </div>
+          <div className="dotted-divider my-5"></div>
 
-          {/* Register Link */}
-          <p className="text-center text-sm text-slate-500">
+          <p className="text-center text-xs text-zinc-500 dark:text-zinc-400">
             Don't have an account?{' '}
             <button
               onClick={() => onNavigate('register')}
-              className="text-blue-400 hover:text-blue-300 font-semibold transition-colors cursor-pointer"
+              className="font-semibold text-zinc-900 dark:text-white underline underline-offset-4 hover:opacity-80 transition-opacity cursor-pointer"
             >
-              Create Account
+              Sign Up
             </button>
           </p>
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-[10px] text-slate-600 mt-6">
-          DeFi Fee & Timing Predictor &copy; {new Date().getFullYear()}
+        <p className="text-center text-[10px] text-zinc-400 dark:text-zinc-600 mt-6">
+          DeFi Gas Adviser Dashboard &copy; {new Date().getFullYear()}
         </p>
       </div>
     </div>
