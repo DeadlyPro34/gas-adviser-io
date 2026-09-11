@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const { startPolling } = require('./jobs/pollFees');
 
 dotenv.config();
 
@@ -19,6 +20,8 @@ mongoose
   .connect(MONGO_URI)
   .then(() => {
     console.log(' Connected to MongoDB successfully.');
+    // Start polling Etherscan for gas prices once DB is ready
+    startPolling();
   })
   .catch((err) => {
     console.warn(' MongoDB connection warning:', err.message);
