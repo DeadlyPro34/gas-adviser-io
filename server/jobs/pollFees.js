@@ -2,11 +2,12 @@ const cron = require('node-cron');
 const { fetchGasPrices } = require('../services/etherscan');
 const FeeHistory = require('../models/FeeHistory');
 const { computeFeePercentile } = require('../helpers/feeHelper');
+const { checkAndTriggerAlerts } = require('../helpers/alertHelper');
 
 /**
  * Starts a cron job that polls gas prices every 20 seconds,
  * persists each reading to MongoDB, emits a "feeUpdate" Socket.io
- * event.
+ * event, and checks untriggered alerts.
  *
  * @param {import('socket.io').Server} io  The Socket.io server instance.
  */
@@ -56,6 +57,12 @@ function startPolling(io) {
 
       io.emit('feeUpdate', feePayload);
       console.log(`[pollFees] 📡 Emitted feeUpdate — label: ${label} (${percentile}th percentile)`);
+
+      // ── Milestone 5: Check and trigger alerts ───────────────────────────
+      const triggeredCount = await checkAndTriggerAlerts(doc, io);
+      if (triggeredCount > 0) {
+        console.log(`[pollFees] 🔔 ${triggeredCount} alert(s) triggered this cycle.`);
+      }
     } catch (err) {
       console.error('[pollFees] Error during poll cycle:', err.message);
     }
