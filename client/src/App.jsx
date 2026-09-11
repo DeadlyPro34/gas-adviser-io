@@ -27,7 +27,7 @@ import Recommendation from './components/Recommendation';
 import TxCostCalculator from './components/TxCostCalculator';
 import AlertManager from './components/AlertManager';
 
-const SOCKET_URL = 'http://localhost:5000';
+const SOCKET_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? undefined : 'http://localhost:5000');
 
 function App() {
   const { isAuthenticated, user, loading: authLoading, logout } = useAuth();
