@@ -54,15 +54,21 @@ export default function FeeChart({ historyData, onTimeframeChange, currentHours 
           <div className="dotted-divider pt-1.5 space-y-1">
             <div className="flex justify-between items-center text-zinc-600 dark:text-zinc-400">
               <span>Fast (Priority):</span>
-              <span className="font-semibold text-zinc-800 dark:text-zinc-200">{data.fastGwei} Gwei</span>
+              <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                {typeof data.fastGwei === 'number' ? (data.fastGwei < 1 ? data.fastGwei.toFixed(3) : data.fastGwei.toFixed(1)) : data.fastGwei} Gwei
+              </span>
             </div>
             <div className="flex justify-between items-center text-zinc-900 dark:text-white font-bold">
               <span>Propose (Market):</span>
-              <span className="font-bold text-sky-500 dark:text-sky-400">{data.proposeGwei} Gwei</span>
+              <span className="font-bold text-sky-500 dark:text-sky-400">
+                {typeof data.proposeGwei === 'number' ? (data.proposeGwei < 1 ? data.proposeGwei.toFixed(3) : data.proposeGwei.toFixed(1)) : data.proposeGwei} Gwei
+              </span>
             </div>
             <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400">
               <span>Safe (Slow):</span>
-              <span className="font-medium">{data.safeGwei} Gwei</span>
+              <span className="font-medium">
+                {typeof data.safeGwei === 'number' ? (data.safeGwei < 1 ? data.safeGwei.toFixed(3) : data.safeGwei.toFixed(1)) : data.safeGwei} Gwei
+              </span>
             </div>
           </div>
         </div>
@@ -106,7 +112,7 @@ export default function FeeChart({ historyData, onTimeframeChange, currentHours 
           </span>
           <div className="flex items-baseline gap-2.5 mt-1">
             <span className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
-              {latest ? `${latest.proposeGwei} Gwei` : '18.4 Gwei'}
+              {latest ? `${typeof latest.proposeGwei === 'number' ? (latest.proposeGwei < 1 ? latest.proposeGwei.toFixed(3) : latest.proposeGwei.toFixed(1)) : latest.proposeGwei} Gwei` : '0.060 Gwei'}
             </span>
             {latest && (
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
@@ -129,7 +135,7 @@ export default function FeeChart({ historyData, onTimeframeChange, currentHours 
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={formattedData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <AreaChart data={formattedData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
               <defs>
                 <linearGradient id="proposeShadcn" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.25} />
@@ -153,7 +159,12 @@ export default function FeeChart({ historyData, onTimeframeChange, currentHours 
                 tick={{ fontSize: 11, fill: isDark ? '#71717a' : '#a1a1aa' }}
                 axisLine={false}
                 tickLine={false}
-                unit=" Gw"
+                domain={['auto', 'auto']}
+                tickFormatter={(val) => {
+                  if (val == null) return '';
+                  return val < 1 ? `${val.toFixed(3)}` : `${val.toFixed(1)}`;
+                }}
+                width={45}
               />
               <Tooltip content={<CustomTooltip />} />
               {/* Dashed Secondary Line (Fast Gwei) */}

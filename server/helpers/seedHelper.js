@@ -19,19 +19,19 @@ async function seedInitialDataIfNeeded() {
     const intervalMs = (24 * 60 * 60 * 1000) / totalPoints;
     const seedDocs = [];
 
-    // Base gas prices around realistic Ethereum mainnet levels (12 - 35 Gwei)
-    let basePropose = 18;
+    // Base gas prices around realistic Ethereum mainnet levels (0.045 - 0.085 Gwei)
+    let basePropose = 0.062;
 
     for (let i = totalPoints; i >= 0; i--) {
       const timestamp = new Date(now - i * intervalMs);
       
       // Simulate organic gas price fluctuations with sinus wave + random noise
-      const sineVariation = Math.sin((i / totalPoints) * Math.PI * 4) * 6;
-      const randomNoise = (Math.random() - 0.48) * 4;
+      const sineVariation = Math.sin((i / totalPoints) * Math.PI * 4) * 0.012;
+      const randomNoise = (Math.random() - 0.48) * 0.008;
       
-      const proposeGwei = Math.max(8, Math.round((basePropose + sineVariation + randomNoise) * 10) / 10);
-      const safeGwei = Math.max(6, Math.round((proposeGwei * 0.85) * 10) / 10);
-      const fastGwei = Math.round((proposeGwei * 1.25) * 10) / 10;
+      const proposeGwei = Math.max(0.045, Math.round((basePropose + sineVariation + randomNoise) * 1000) / 1000);
+      const safeGwei = Math.max(0.040, Math.round((proposeGwei * 0.9) * 1000) / 1000);
+      const fastGwei = Math.round((proposeGwei * 1.15) * 1000) / 1000;
 
       seedDocs.push({
         timestamp,

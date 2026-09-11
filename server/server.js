@@ -242,22 +242,78 @@ app.post('/api/alerts', authMiddleware, async (req, res) => {
     }
 
     if (!dbReady) {
+      const latestMem = memFeeHistory[memFeeHistory.length - 1];
+      const isMemTriggered = latestMem && latestMem.proposeGwei <= thresholdGwei;
       const newAlert = {
         _id: `mem-alert-${Date.now()}`,
         userId,
         chain: chain || 'ethereum',
         thresholdGwei,
         createdAt: new Date(),
-        triggered: false,
+        triggered: isMemTriggered || false,
       };
       memAlerts.push(newAlert);
       console.log(`[alerts] ✅ In-memory alert created — ${newAlert.chain} ≤ ${thresholdGwei} Gwei (user: ${userId})`);
+
+      if (isMemTriggered) {
+        const { sendGasAlertEmail } = require('./helpers/emailHelper');
+        // Look up registered user email
+        const User = require('./models/User');
+        User.findById(userId).lean().then((u) => {
+          if (u && u.email) {
+            sendGasAlertEmail(u.email, {
+              chain: newAlert.chain,
+              thresholdGwei: newAlert.thresholdGwei,
+              currentGwei: latestMem.proposeGwei,
+            });
+          }
+        }).catch(() => {});
+        io.emit('alertTriggered', {
+          alertId: newAlert._id,
+          chain: newAlert.chain,
+          thresholdGwei: newAlert.thresholdGwei,
+          currentGwei: latestMem.proposeGwei,
+          triggeredAt: new Date().toISOString(),
+        });
+      }
+
       return res.status(201).json(newAlert);
     }
 
     const UserAlert = require('./models/UserAlert');
-    const alert = await UserAlert.create({ userId, chain: chain || 'ethereum', thresholdGwei });
+    const FeeHistory = require('./models/FeeHistory');
+    const User = require('./models/User');
+    const { sendGasAlertEmail } = require('./helpers/emailHelper');
+
+    const latestFee = await FeeHistory.findOne().sort({ timestamp: -1 }).lean();
+    const isTriggered = latestFee && latestFee.proposeGwei <= thresholdGwei;
+
+    const alert = await UserAlert.create({
+      userId,
+      chain: chain || 'ethereum',
+      thresholdGwei,
+      triggered: isTriggered || false,
+    });
     console.log(`[alerts] ✅ Alert created — chain: ${alert.chain}, threshold: ${alert.thresholdGwei} Gwei (user: ${userId})`);
+
+    if (isTriggered) {
+      const user = await User.findById(userId).lean();
+      if (user && user.email) {
+        sendGasAlertEmail(user.email, {
+          chain: alert.chain,
+          thresholdGwei: alert.thresholdGwei,
+          currentGwei: latestFee.proposeGwei,
+        }).catch((e) => console.error('[POST /api/alerts] Email send error:', e.message));
+      }
+      io.emit('alertTriggered', {
+        alertId: alert._id,
+        chain: alert.chain,
+        thresholdGwei: alert.thresholdGwei,
+        currentGwei: latestFee.proposeGwei,
+        triggeredAt: new Date().toISOString(),
+      });
+    }
+
     return res.status(201).json(alert);
   } catch (err) {
     console.error('[POST /api/alerts] Error:', err.message);

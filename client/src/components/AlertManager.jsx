@@ -113,8 +113,8 @@ export default function AlertManager({ socket, proposeGwei, onAlertTriggered }) 
           <div className="relative flex-1">
             <input
               type="number"
-              step="1"
-              placeholder="e.g. 15"
+              step="any"
+              placeholder="e.g. 0.06 or 15"
               value={thresholdInput}
               onChange={(e) => setThresholdInput(e.target.value)}
               className="shadcn-input w-full px-3.5 py-2 rounded-lg text-xs placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none"

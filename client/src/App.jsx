@@ -229,9 +229,9 @@ function App() {
       <aside
         className={`${
           sidebarOpen ? 'w-64' : 'w-0 -translate-x-full lg:translate-x-0 lg:w-20'
-        } shrink-0 bg-white dark:bg-[#0c0c0e] border-r border-zinc-200 dark:border-zinc-800 flex flex-col justify-between transition-all duration-300 z-40 fixed lg:static inset-y-0 left-0 shadow-lg lg:shadow-none`}
+        } shrink-0 bg-white dark:bg-[#0c0c0e] border-r border-zinc-200 dark:border-zinc-800 flex flex-col justify-between transition-all duration-300 z-40 fixed lg:sticky top-0 h-screen overflow-hidden shadow-lg lg:shadow-none select-none`}
       >
-        <div className="p-4 space-y-6 overflow-y-auto">
+        <div className="p-4 space-y-4">
           {/* Brand Header */}
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2.5">
@@ -262,18 +262,18 @@ function App() {
           </div>
 
           {/* Navigation Items */}
-          <div className="space-y-5">
+          <div className="space-y-3.5">
             <div>
               {sidebarOpen && (
                 <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 px-2">
                   Dashboard
                 </span>
               )}
-              <div className="mt-1.5 space-y-1">
+              <div className="mt-1 space-y-0.5">
                 {/* Active "Modern" Pill Button (matches Image 1 & 2) */}
                 <button
                   onClick={() => navigate('dashboard')}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold shadow-sm transition-all text-left cursor-pointer ${
+                  className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-all text-left cursor-pointer ${
                     currentView === 'dashboard'
                       ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-bold'
                       : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:text-zinc-900 dark:hover:text-white'
@@ -291,11 +291,11 @@ function App() {
                   Feeds & Pages
                 </span>
               )}
-              <div className="mt-1.5 space-y-0.5">
+              <div className="mt-1 space-y-0.5">
                 {/* User Profile Link */}
                 <button
                   onClick={() => navigate('profile')}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left cursor-pointer ${
+                  className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-left cursor-pointer ${
                     currentView === 'profile'
                       ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-white font-semibold'
                       : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:text-zinc-900 dark:hover:text-white'
@@ -308,7 +308,7 @@ function App() {
                 <a
                   href="#speedometer"
                   onClick={() => currentView !== 'dashboard' && navigate('dashboard')}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:text-zinc-900 dark:hover:text-white text-xs font-medium transition-colors"
+                  className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:text-zinc-900 dark:hover:text-white text-xs font-medium transition-colors"
                 >
                   <Gauge className="w-4 h-4 shrink-0 text-zinc-400" />
                   {sidebarOpen && <span>Fee Speedometer</span>}
@@ -316,7 +316,7 @@ function App() {
                 <a
                   href="#trends"
                   onClick={() => currentView !== 'dashboard' && navigate('dashboard')}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:text-zinc-900 dark:hover:text-white text-xs font-medium transition-colors"
+                  className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:text-zinc-900 dark:hover:text-white text-xs font-medium transition-colors"
                 >
                   <TrendingUp className="w-4 h-4 shrink-0 text-zinc-400" />
                   {sidebarOpen && <span>Fee Trends Chart</span>}
@@ -324,7 +324,7 @@ function App() {
                 <a
                   href="#advisor"
                   onClick={() => currentView !== 'dashboard' && navigate('dashboard')}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:text-zinc-900 dark:hover:text-white text-xs font-medium transition-colors"
+                  className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:text-zinc-900 dark:hover:text-white text-xs font-medium transition-colors"
                 >
                   <Sparkles className="w-4 h-4 shrink-0 text-zinc-400" />
                   {sidebarOpen && <span>Timing Advisor</span>}
@@ -338,11 +338,11 @@ function App() {
                   DeFi Tools
                 </span>
               )}
-              <div className="mt-1.5 space-y-0.5">
+              <div className="mt-1 space-y-0.5">
                 <a
                   href="#calculator"
                   onClick={() => currentView !== 'dashboard' && navigate('dashboard')}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:text-zinc-900 dark:hover:text-white text-xs font-medium transition-colors"
+                  className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:text-zinc-900 dark:hover:text-white text-xs font-medium transition-colors"
                 >
                   <DollarSign className="w-4 h-4 shrink-0 text-zinc-400" />
                   {sidebarOpen && <span>USD Cost Calculator</span>}
@@ -350,7 +350,7 @@ function App() {
                 <a
                   href="#alerts"
                   onClick={() => currentView !== 'dashboard' && navigate('dashboard')}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:text-zinc-900 dark:hover:text-white text-xs font-medium transition-colors"
+                  className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:text-zinc-900 dark:hover:text-white text-xs font-medium transition-colors"
                 >
                   <Bell className="w-4 h-4 shrink-0 text-zinc-400" />
                   {sidebarOpen && <span>Threshold Alerts</span>}
@@ -362,8 +362,8 @@ function App() {
 
         {/* Bottom Plan Widget (Matches Image 1 & 2 "Basic Plan 70%" card) */}
         {sidebarOpen && (
-          <div className="p-4 space-y-3">
-            <div className="shadcn-card-subtle p-3.5 rounded-xl space-y-2.5">
+          <div className="p-4 space-y-2.5 shrink-0 border-t border-zinc-100 dark:border-zinc-800/60">
+            <div className="shadcn-card-subtle p-3 rounded-xl space-y-2">
               <div className="flex items-center justify-between text-xs font-bold text-zinc-900 dark:text-white">
                 <div className="flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
@@ -383,7 +383,7 @@ function App() {
               </button>
             </div>
 
-            <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400 px-1 pt-1">
+            <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400 px-1 pt-0.5">
               <span className="flex items-center gap-1 hover:text-zinc-900 dark:hover:text-white cursor-pointer">
                 <HelpCircle className="w-3.5 h-3.5" /> Help Center
               </span>

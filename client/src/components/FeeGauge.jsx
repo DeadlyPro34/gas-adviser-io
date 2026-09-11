@@ -41,8 +41,10 @@ export default function FeeGauge({ feeData, livePulse }) {
     }
   };
 
-  const config = getLabelConfig(label);
-  const LabelIcon = config.icon;
+  const formatDisplayGwei = (val) => {
+    if (val == null) return '--';
+    return typeof val === 'number' ? (val < 1 ? val.toFixed(3) : val.toFixed(1)) : val;
+  };
 
   return (
     <div className="shadcn-card p-6 space-y-5 relative overflow-hidden">
@@ -86,7 +88,7 @@ export default function FeeGauge({ feeData, livePulse }) {
             </div>
           </div>
           <div className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-            {safeGwei} <span className="text-xs font-normal text-zinc-500">Gwei</span>
+            {formatDisplayGwei(safeGwei)} <span className="text-xs font-normal text-zinc-500">Gwei</span>
           </div>
           <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">Est. wait: ~3 mins</p>
         </div>
@@ -100,7 +102,7 @@ export default function FeeGauge({ feeData, livePulse }) {
             </div>
           </div>
           <div className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-            {proposeGwei} <span className="text-xs font-normal text-zinc-500">Gwei</span>
+            {formatDisplayGwei(proposeGwei)} <span className="text-xs font-normal text-zinc-500">Gwei</span>
           </div>
           <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">Est. wait: ~45 secs</p>
         </div>
@@ -114,7 +116,7 @@ export default function FeeGauge({ feeData, livePulse }) {
             </div>
           </div>
           <div className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-            {fastGwei} <span className="text-xs font-normal text-zinc-500">Gwei</span>
+            {formatDisplayGwei(fastGwei)} <span className="text-xs font-normal text-zinc-500">Gwei</span>
           </div>
           <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">Est. wait: ~15 secs</p>
         </div>
