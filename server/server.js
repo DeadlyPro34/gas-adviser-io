@@ -6,6 +6,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { startPolling } = require('./jobs/pollFees');
 const FeeHistory = require('./models/FeeHistory');
+const UserAlert = require('./models/UserAlert');
 const { computeFeePercentile } = require('./helpers/feeHelper');
 
 dotenv.config();
@@ -108,6 +109,36 @@ app.get('/api/fees/history', async (req, res) => {
     return res.status(200).json(history);
   } catch (err) {
     console.error('[/api/fees/history] Error:', err.message);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// ─── Milestone 5 — Alerts API Routes ─────────────────────────────────────────
+
+/**
+ * POST /api/alerts
+ * Creates a new user alert. Body: { chain?, thresholdGwei }
+ */
+app.post('/api/alerts', async (req, res) => {
+  try {
+    const { chain, thresholdGwei } = req.body;
+
+    if (thresholdGwei == null || typeof thresholdGwei !== 'number' || thresholdGwei <= 0) {
+      return res.status(400).json({
+        error: 'thresholdGwei is required and must be a positive number.',
+      });
+    }
+
+    const alert = await UserAlert.create({
+      chain: chain || 'ethereum',
+      thresholdGwei,
+    });
+
+    console.log(`[alerts] ✅ New alert created — chain: ${alert.chain}, threshold: ${alert.thresholdGwei} gwei`);
+
+    return res.status(201).json(alert);
+  } catch (err) {
+    console.error('[POST /api/alerts] Error:', err.message);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 });
