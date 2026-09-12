@@ -3,6 +3,7 @@ const { fetchGasPrices, SUPPORTED_CHAINS } = require('../services/etherscan');
 const FeeHistory = require('../models/FeeHistory');
 const { computeFeePercentile } = require('../helpers/feeHelper');
 const { checkAndTriggerAlerts } = require('../helpers/alertHelper');
+const { lastLabelByChain } = require('../state/labelState');
 
 /**
  * Small helper: sleep for `ms` milliseconds.
@@ -17,8 +18,6 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * @param {import('socket.io').Server} io  The Socket.io server instance.
  */
 function startPolling(io) {
-  const lastLabelByChain = {};
-
   const runPollCycle = async () => {
     const chainSlugs = Object.keys(SUPPORTED_CHAINS);
 
