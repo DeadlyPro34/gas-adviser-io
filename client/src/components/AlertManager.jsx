@@ -83,16 +83,16 @@ export default function AlertManager({ socket, proposeGwei, onAlertTriggered }) 
   return (
     <div className="shadcn-card p-6 space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 dotted-divider">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/60 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
-            <Bell className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+      <div className="flex items-center justify-between pb-4 dotted-divider">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 flex items-center justify-center shrink-0">
+            <Bell className="w-5 h-5 text-amber-500 dark:text-amber-400" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-white tracking-tight">
+            <h3 className="text-base font-bold text-zinc-900 dark:text-white tracking-tight">
               Gas Price Alerts
             </h3>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
               Instant notification when fees drop below target
             </p>
           </div>
@@ -100,16 +100,16 @@ export default function AlertManager({ socket, proposeGwei, onAlertTriggered }) 
 
         <button
           onClick={fetchAlerts}
-          className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
+          className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
           title="Refresh Alerts"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
+          <RefreshCw className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Form (Matches Image 3 Shadcn form input & solid button) */}
-      <form onSubmit={handleCreateAlert} className="space-y-2.5">
-        <div className="flex flex-col sm:flex-row gap-2.5">
+      {/* Form */}
+      <form onSubmit={handleCreateAlert} className="space-y-3">
+        <div className="flex gap-3">
           <div className="relative flex-1">
             <input
               type="number"
@@ -117,9 +117,9 @@ export default function AlertManager({ socket, proposeGwei, onAlertTriggered }) 
               placeholder="e.g. 0.06 or 15"
               value={thresholdInput}
               onChange={(e) => setThresholdInput(e.target.value)}
-              className="shadcn-input w-full px-3.5 py-2 rounded-lg text-xs placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none"
+              className="shadcn-input w-full pl-4 pr-14 py-3 rounded-xl text-sm font-medium placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none"
             />
-            <span className="absolute right-3.5 top-2.5 text-[11px] text-zinc-400 font-semibold">
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-zinc-400 dark:text-zinc-500 font-bold pointer-events-none">
               Gwei
             </span>
           </div>
@@ -127,15 +127,15 @@ export default function AlertManager({ socket, proposeGwei, onAlertTriggered }) 
           <button
             type="submit"
             disabled={loading}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 font-semibold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 font-semibold text-sm shadow-sm transition-all cursor-pointer disabled:opacity-50 whitespace-nowrap"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-4 h-4" />
             Set Alert
           </button>
         </div>
 
-        {error && <p className="text-[11px] text-rose-500 font-medium">{error}</p>}
-        {success && <p className="text-[11px] text-emerald-500 font-medium">{success}</p>}
+        {error && <p className="text-xs text-rose-500 font-medium">{error}</p>}
+        {success && <p className="text-xs text-emerald-500 font-medium">{success}</p>}
       </form>
 
       {/* Alerts Table / List */}
