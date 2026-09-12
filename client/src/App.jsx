@@ -61,7 +61,8 @@ function App() {
   // Dashboard state
   const [health, setHealth] = useState(null);
   const [healthLoading, setHealthLoading] = useState(true);
-  const [currentFee, setCurrentFee] = useState(null);
+  const [currentFee, setCurrentFee] = useState(null); // Ethereum current fee (for gauge/advisor/calc)
+  const [chainFees, setChainFees] = useState([]); // All chains (for Compare & Alerts)
   const [historyData, setHistoryData] = useState([]);
   const [historyHours, setHistoryHours] = useState(24);
   const [socket, setSocket] = useState(null);
@@ -144,6 +145,13 @@ function App() {
     } catch (err) {}
   };
 
+  const fetchCompare = async () => {
+    try {
+      const res = await axios.get('/api/fees/compare');
+      setChainFees(res.data);
+    } catch (err) {}
+  };
+
   const fetchHistory = async (hours) => {
     try {
       const res = await axios.get(`/api/fees/history?hours=${hours}`);
@@ -174,6 +182,7 @@ function App() {
 
     checkHealth();
     fetchCurrentFee();
+    fetchCompare();
     fetchHistory(historyHours);
 
     const newSocket = socketIOClient(SOCKET_URL);
@@ -182,10 +191,24 @@ function App() {
     newSocket.on('connect', () => setSocketConnected(true));
     newSocket.on('disconnect', () => setSocketConnected(false));
     newSocket.on('feeUpdate', (data) => {
-      setCurrentFee(data);
-      setHistoryData((prev) => [...prev, data]);
-      setLivePulse(true);
-      setTimeout(() => setLivePulse(false), 1200);
+      // If it's Ethereum, update the specific Ethereum state used by other components
+      if (data.chain === 'ethereum' || !data.chain) {
+        setCurrentFee(data);
+        setHistoryData((prev) => [...prev, data]);
+        setLivePulse(true);
+        setTimeout(() => setLivePulse(false), 1200);
+      }
+      
+      // Always update the multi-chain state
+      setChainFees((prev) => {
+        const idx = prev.findIndex((c) => c.chain === data.chain);
+        if (idx >= 0) {
+          const updated = [...prev];
+          updated[idx] = data;
+          return updated;
+        }
+        return [...prev, data];
+      });
     });
 
     return () => newSocket.disconnect();
@@ -826,7 +849,7 @@ function App() {
                 <div id="alerts">
                   <AlertManager
                     socket={socket}
-                    proposeGwei={currentFee?.proposeGwei || 20}
+                    chainFees={chainFees}
                     onAlertTriggered={handleAlertTriggered}
                   />
                 </div>
@@ -834,7 +857,7 @@ function App() {
 
               {/* ─── Multi-Chain Comparison ─── */}
               <div id="chain-compare">
-                <ChainCompare socket={socket} />
+                <ChainCompare socket={socket} chainFees={chainFees} onRefresh={fetchCompare} />
               </div>
 
               {/* ─── Backend Status Panel ─── */}
