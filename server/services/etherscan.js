@@ -4,6 +4,17 @@ const axios = require('axios');
 const ETHERSCAN_API_URL = 'https://api.etherscan.io/v2/api';
 
 /**
+ * Supported EVM chains and their Etherscan V2 chain IDs.
+ * Etherscan V2 uses the `chainid` param to target different chains — same API key works for all.
+ */
+const SUPPORTED_CHAINS = {
+  ethereum: 1,
+  polygon: 137,
+  arbitrum: 42161,
+  base: 8453,
+};
+
+/**
  * Format Gwei values to clean numeric representation:
  * If < 1 Gwei, keep 2-3 decimal places (e.g. 0.06); if >= 1 Gwei, keep 1 decimal place (e.g. 18.2)
  */
@@ -15,10 +26,11 @@ function cleanGwei(val) {
 
 /**
  * Fetches current gas prices from the Etherscan Gas Oracle V2 endpoint.
+ * @param {string} [chainSlug='ethereum'] - Chain slug from SUPPORTED_CHAINS
  * @returns {{ safeGwei: number, proposeGwei: number, fastGwei: number } | null}
  *   Parsed gwei values, or null if the request failed.
  */
-async function fetchGasPrices() {
+async function fetchGasPrices(chainSlug = 'ethereum') {
   try {
     const apiKey = process.env.ETHERSCAN_API_KEY;
     if (!apiKey || apiKey === 'YOUR_ETHERSCAN_API_KEY') {
@@ -26,9 +38,15 @@ async function fetchGasPrices() {
       return null;
     }
 
+    const chainId = SUPPORTED_CHAINS[chainSlug];
+    if (!chainId) {
+      console.warn(`[etherscan] Unknown chain slug "${chainSlug}" — skipping.`);
+      return null;
+    }
+
     const response = await axios.get(ETHERSCAN_API_URL, {
       params: {
-        chainid: 1, // Ethereum Mainnet
+        chainid: chainId,
         module: 'gastracker',
         action: 'gasoracle',
         apikey: apiKey,
@@ -39,7 +57,7 @@ async function fetchGasPrices() {
     const { data } = response;
 
     if (data.status !== '1' || !data.result) {
-      console.warn('[etherscan] Unexpected API response:', data.message || data);
+      console.warn(`[etherscan] Unexpected API response for ${chainSlug}:`, data.message || data);
       return null;
     }
 
@@ -51,9 +69,9 @@ async function fetchGasPrices() {
       fastGwei: cleanGwei(FastGasPrice),
     };
   } catch (err) {
-    console.error('[etherscan] Failed to fetch gas prices:', err.message);
+    console.error(`[etherscan] Failed to fetch gas prices for ${chainSlug}:`, err.message);
     return null;
   }
 }
 
-module.exports = { fetchGasPrices, cleanGwei };
+module.exports = { fetchGasPrices, cleanGwei, SUPPORTED_CHAINS };
