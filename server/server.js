@@ -107,6 +107,7 @@ mongoose
 // ─── Mock Polling (offline mode) ─────────────────────────────────────────────
 function startMockPolling() {
   const cron = require('node-cron');
+  const lastLabelByChainMem = {};
   cron.schedule('*/20 * * * * *', () => {
     // Generate mock data for all chains
     for (const chain of Object.keys(SUPPORTED_CHAINS)) {
@@ -129,7 +130,13 @@ function startMockPolling() {
 
       memFeeHistory.push(doc);
 
-      const { percentile, label } = computeFeePercentile(doc, chainHistory);
+      const { percentile, label } = computeFeePercentile(
+        doc,
+        chainHistory,
+        lastLabelByChainMem[chain]
+      );
+      lastLabelByChainMem[chain] = label;
+      
       const payload = { ...doc, percentile, label };
 
       io.emit('feeUpdate', payload);
