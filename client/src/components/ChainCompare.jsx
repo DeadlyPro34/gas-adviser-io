@@ -12,52 +12,20 @@ const CHAIN_META = {
 const ETH_PRICE_USD = 3200; // Approximate; same assumption as TxCostCalculator
 const SWAP_GAS_LIMIT = 150000; // Uniswap swap gas limit
 
-export default function ChainCompare({ socket }) {
-  const [chains, setChains] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState(null);
+export default function ChainCompare({ chainFees = [], onRefresh }) {
+  const [loading, setLoading] = useState(false);
 
-  const fetchCompare = async () => {
-    try {
+  const handleRefresh = async () => {
+    if (onRefresh) {
       setLoading(true);
-      const res = await axios.get('/api/fees/compare');
-      setChains(res.data);
-      setLastUpdated(new Date());
-    } catch (err) {
-      console.error('Failed to fetch chain comparison:', err);
-    } finally {
+      await onRefresh();
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchCompare();
-  }, []);
-
-  // Listen for feeUpdate events to keep data fresh
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleFeeUpdate = (data) => {
-      setChains((prev) => {
-        const idx = prev.findIndex((c) => c.chain === data.chain);
-        if (idx >= 0) {
-          const updated = [...prev];
-          updated[idx] = data;
-          return updated;
-        }
-        return [...prev, data];
-      });
-      setLastUpdated(new Date());
-    };
-
-    socket.on('feeUpdate', handleFeeUpdate);
-    return () => socket.off('feeUpdate', handleFeeUpdate);
-  }, [socket]);
-
   // Find cheapest chain
-  const cheapestChain = chains.length > 0
-    ? chains.reduce((min, c) => {
+  const cheapestChain = chainFees.length > 0
+    ? chainFees.reduce((min, c) => {
         const minCost = (min.proposeGwei * SWAP_GAS_LIMIT) / 1e9;
         const cCost = (c.proposeGwei * SWAP_GAS_LIMIT) / 1e9;
         return cCost < minCost ? c : min;
@@ -106,7 +74,7 @@ export default function ChainCompare({ socket }) {
         </div>
 
         <button
-          onClick={fetchCompare}
+          onClick={handleRefresh}
           disabled={loading}
           className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
           title="Refresh"
@@ -116,17 +84,17 @@ export default function ChainCompare({ socket }) {
       </div>
 
       {/* Chain Rows */}
-      {loading && chains.length === 0 ? (
+      {loading && chainFees.length === 0 ? (
         <div className="flex items-center justify-center py-8 text-xs text-zinc-500">
           <RefreshCw className="w-4 h-4 animate-spin mr-2" /> Loading chain data...
         </div>
-      ) : chains.length === 0 ? (
+      ) : chainFees.length === 0 ? (
         <div className="text-center py-6 text-xs text-zinc-500 dark:text-zinc-400">
           No chain data available yet. The server is still collecting readings.
         </div>
       ) : (
         <div className="space-y-2.5">
-          {chains.map((c) => {
+          {chainFees.map((c) => {
             const meta = CHAIN_META[c.chain] || { name: c.chain, color: 'bg-zinc-500', symbol: '?', icon: '●' };
             const isCheapest = cheapestChain && c.chain === cheapestChain.chain;
             const labelStyle = getLabelStyle(c.label);
@@ -179,12 +147,9 @@ export default function ChainCompare({ socket }) {
       )}
 
       {/* Footer */}
-      {lastUpdated && (
-        <div className="flex items-center justify-between text-[10px] text-zinc-400 dark:text-zinc-500 pt-1">
-          <span>Prices update every 20 seconds via Socket.io</span>
-          <span>Last: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-        </div>
-      )}
+      <div className="flex items-center justify-between text-[10px] text-zinc-400 dark:text-zinc-500 pt-1">
+        <span>Prices update every 20 seconds via Socket.io</span>
+      </div>
     </div>
   );
 }
