@@ -6,6 +6,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { startPolling } = require('./jobs/pollFees');
 const { computeFeePercentile } = require('./helpers/feeHelper');
+const { SUPPORTED_CHAINS } = require('./services/etherscan');
 const authRoutes = require('./routes/authRoutes');
 const authMiddleware = require('./middleware/authMiddleware');
 
@@ -41,22 +42,33 @@ function generateMockHistory() {
   const totalPoints = 48;
   const intervalMs = (24 * 60 * 60 * 1000) / totalPoints;
   const result = [];
-  let base = 18;
-  for (let i = totalPoints; i >= 0; i--) {
-    const timestamp = new Date(now - i * intervalMs);
-    const sine = Math.sin((i / totalPoints) * Math.PI * 4) * 6;
-    const noise = (Math.random() - 0.48) * 4;
-    const proposeGwei = Math.max(8, Math.round((base + sine + noise) * 10) / 10);
-    const safeGwei    = Math.max(6, Math.round(proposeGwei * 0.85 * 10) / 10);
-    const fastGwei    = Math.round(proposeGwei * 1.25 * 10) / 10;
-    result.push({
-      _id: `mock-${i}`,
-      timestamp,
-      chain: 'ethereum',
-      safeGwei,
-      proposeGwei,
-      fastGwei,
-    });
+
+  // Generate mock data for ALL supported chains
+  const chainConfigs = {
+    ethereum: { base: 18, multiplier: 1 },
+    polygon:  { base: 30, multiplier: 1 },
+    arbitrum: { base: 0.1, multiplier: 1 },
+    base:     { base: 0.05, multiplier: 1 },
+  };
+
+  for (const [chain, config] of Object.entries(chainConfigs)) {
+    let base = config.base;
+    for (let i = totalPoints; i >= 0; i--) {
+      const timestamp = new Date(now - i * intervalMs);
+      const sine = Math.sin((i / totalPoints) * Math.PI * 4) * (base * 0.3);
+      const noise = (Math.random() - 0.48) * (base * 0.2);
+      const proposeGwei = Math.max(base * 0.3, Math.round((base + sine + noise) * 1000) / 1000);
+      const safeGwei    = Math.max(base * 0.2, Math.round(proposeGwei * 0.85 * 1000) / 1000);
+      const fastGwei    = Math.round(proposeGwei * 1.25 * 1000) / 1000;
+      result.push({
+        _id: `mock-${chain}-${i}`,
+        timestamp,
+        chain,
+        safeGwei,
+        proposeGwei,
+        fastGwei,
+      });
+    }
   }
   return result;
 }
@@ -87,7 +99,7 @@ mongoose
     console.warn('🔄 Starting in offline/demo mode with in-memory mock data.');
     // Seed in-memory data for demo mode
     memFeeHistory = generateMockHistory();
-    console.log(`[mock] Generated ${memFeeHistory.length} in-memory fee records.`);
+    console.log(`[mock] Generated ${memFeeHistory.length} in-memory fee records across ${Object.keys(SUPPORTED_CHAINS).length} chains.`);
     // Start a simple mock cron that emits Socket.io events every 20 seconds
     startMockPolling();
   });
@@ -96,48 +108,62 @@ mongoose
 function startMockPolling() {
   const cron = require('node-cron');
   cron.schedule('*/20 * * * * *', () => {
-    const last = memFeeHistory[memFeeHistory.length - 1] || { proposeGwei: 18, safeGwei: 15, fastGwei: 22 };
-    const noise = (Math.random() - 0.48) * 3;
-    const proposeGwei = Math.max(6, Math.round((last.proposeGwei + noise) * 10) / 10);
-    const safeGwei    = Math.max(4, Math.round(proposeGwei * 0.85 * 10) / 10);
-    const fastGwei    = Math.round(proposeGwei * 1.25 * 10) / 10;
+    // Generate mock data for all chains
+    for (const chain of Object.keys(SUPPORTED_CHAINS)) {
+      const chainHistory = memFeeHistory.filter(d => d.chain === chain);
+      const last = chainHistory[chainHistory.length - 1] || { proposeGwei: 18, safeGwei: 15, fastGwei: 22 };
+      const noiseScale = last.proposeGwei < 1 ? 0.02 : 3;
+      const noise = (Math.random() - 0.48) * noiseScale;
+      const proposeGwei = Math.max(last.proposeGwei * 0.3, Math.round((last.proposeGwei + noise) * 1000) / 1000);
+      const safeGwei    = Math.max(proposeGwei * 0.5, Math.round(proposeGwei * 0.85 * 1000) / 1000);
+      const fastGwei    = Math.round(proposeGwei * 1.25 * 1000) / 1000;
 
-    const doc = {
-      _id: `mock-live-${Date.now()}`,
-      timestamp: new Date(),
-      chain: 'ethereum',
-      safeGwei,
-      proposeGwei,
-      fastGwei,
-    };
+      const doc = {
+        _id: `mock-live-${chain}-${Date.now()}`,
+        timestamp: new Date(),
+        chain,
+        safeGwei,
+        proposeGwei,
+        fastGwei,
+      };
 
-    memFeeHistory.push(doc);
-    // Keep last 72 hours max
-    if (memFeeHistory.length > 144) memFeeHistory.shift();
+      memFeeHistory.push(doc);
 
-    const { percentile, label } = computeFeePercentile(doc, memFeeHistory);
-    const payload = { ...doc, percentile, label };
+      const { percentile, label } = computeFeePercentile(doc, chainHistory);
+      const payload = { ...doc, percentile, label };
 
-    io.emit('feeUpdate', payload);
-    console.log(`[mock-poll] 📡 Emitted feeUpdate — ${proposeGwei} Gwei (${label})`);
+      io.emit('feeUpdate', payload);
 
-    // Check in-memory alerts
-    const triggered = memAlerts.filter(
-      (a) => !a.triggered && a.thresholdGwei >= proposeGwei
-    );
-    triggered.forEach((a) => {
-      a.triggered = true;
-      io.emit('alertTriggered', {
-        alertId: a._id,
-        chain: a.chain,
-        thresholdGwei: a.thresholdGwei,
-        currentGwei: proposeGwei,
-        triggeredAt: new Date().toISOString(),
+      // Check in-memory alerts for this chain
+      const triggered = memAlerts.filter(
+        (a) => !a.triggered && a.chain === chain && a.thresholdGwei >= proposeGwei
+      );
+      triggered.forEach((a) => {
+        a.triggered = true;
+        io.emit('alertTriggered', {
+          alertId: a._id,
+          chain: a.chain,
+          thresholdGwei: a.thresholdGwei,
+          currentGwei: proposeGwei,
+          triggeredAt: new Date().toISOString(),
+        });
+        console.log(`[mock-poll] 🔔 Alert triggered — ${chain} threshold ${a.thresholdGwei} Gwei`);
       });
-      console.log(`[mock-poll] 🔔 Alert triggered — threshold ${a.thresholdGwei} Gwei`);
-    });
+    }
+
+    // Keep last 72 hours max per chain
+    if (memFeeHistory.length > 144 * Object.keys(SUPPORTED_CHAINS).length) {
+      memFeeHistory = memFeeHistory.slice(-144 * Object.keys(SUPPORTED_CHAINS).length);
+    }
   });
-  console.log('[mock-poll] Mock cron started — emitting feeUpdate every 20 seconds.');
+  console.log('[mock-poll] Mock cron started — emitting feeUpdate for all chains every 20 seconds.');
+}
+
+// ─── Helper: validate chain param ─────────────────────────────────────────────
+function validateChain(chainParam) {
+  const chain = chainParam || 'ethereum';
+  if (!SUPPORTED_CHAINS[chain]) return null;
+  return chain;
 }
 
 // ─── Health check ─────────────────────────────────────────────────────────────
@@ -147,27 +173,31 @@ app.get('/api/health', (req, res) => {
     message: 'DeFi Fee & Timing Predictor Backend is running.',
     timestamp: new Date().toISOString(),
     dbState: mongoose.connection.readyState === 1 ? 'connected' : 'offline (demo mode)',
+    supportedChains: Object.keys(SUPPORTED_CHAINS),
   });
 });
 
-// ─── Fee API — current ────────────────────────────────────────────────────────
+// ─── Fee API — current (with ?chain= filter) ─────────────────────────────────
 app.get('/api/fees/current', async (req, res) => {
   try {
+    const chain = validateChain(req.query.chain);
+    if (!chain) return res.status(400).json({ error: `Unrecognized chain. Supported: ${Object.keys(SUPPORTED_CHAINS).join(', ')}` });
+
     if (!dbReady) {
-      // Serve from in-memory
-      const latest = memFeeHistory[memFeeHistory.length - 1];
+      const chainHistory = memFeeHistory.filter(d => d.chain === chain);
+      const latest = chainHistory[chainHistory.length - 1];
       if (!latest) return res.status(404).json({ error: 'No data yet.' });
-      const { percentile, label } = computeFeePercentile(latest, memFeeHistory);
+      const { percentile, label } = computeFeePercentile(latest, chainHistory);
       return res.status(200).json({ ...latest, percentile, label });
     }
 
     const FeeHistory = require('./models/FeeHistory');
-    const latest = await FeeHistory.findOne().sort({ timestamp: -1 }).lean();
+    const latest = await FeeHistory.findOne({ chain }).sort({ timestamp: -1 }).lean();
     if (!latest) return res.status(404).json({ error: 'No fee data available yet.' });
 
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const history24h = await FeeHistory.find(
-      { timestamp: { $gte: twentyFourHoursAgo } },
+      { chain, timestamp: { $gte: twentyFourHoursAgo } },
       { proposeGwei: 1, _id: 0 }
     ).lean();
     const { percentile, label } = computeFeePercentile(latest, history24h);
@@ -178,24 +208,67 @@ app.get('/api/fees/current', async (req, res) => {
   }
 });
 
-// ─── Fee API — history ────────────────────────────────────────────────────────
+// ─── Fee API — history (with ?chain= filter) ─────────────────────────────────
 app.get('/api/fees/history', async (req, res) => {
   try {
+    const chain = validateChain(req.query.chain);
+    if (!chain) return res.status(400).json({ error: `Unrecognized chain. Supported: ${Object.keys(SUPPORTED_CHAINS).join(', ')}` });
+
     const hours = Math.min(168, Math.max(1, parseInt(req.query.hours, 10) || 24));
     const since = new Date(Date.now() - hours * 60 * 60 * 1000);
 
     if (!dbReady) {
-      const filtered = memFeeHistory.filter((d) => new Date(d.timestamp) >= since);
+      const filtered = memFeeHistory.filter((d) => d.chain === chain && new Date(d.timestamp) >= since);
       return res.status(200).json(filtered);
     }
 
     const FeeHistory = require('./models/FeeHistory');
-    const history = await FeeHistory.find({ timestamp: { $gte: since } })
+    const history = await FeeHistory.find({ chain, timestamp: { $gte: since } })
       .sort({ timestamp: 1 })
       .lean();
     return res.status(200).json(history);
   } catch (err) {
     console.error('[/api/fees/history] Error:', err.message);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// ─── Fee API — compare (all chains at once) ──────────────────────────────────
+app.get('/api/fees/compare', async (req, res) => {
+  try {
+    const chainSlugs = Object.keys(SUPPORTED_CHAINS);
+    const results = [];
+
+    if (!dbReady) {
+      for (const chain of chainSlugs) {
+        const chainHistory = memFeeHistory.filter(d => d.chain === chain);
+        const latest = chainHistory[chainHistory.length - 1];
+        if (!latest) continue;
+        const { percentile, label } = computeFeePercentile(latest, chainHistory);
+        results.push({ ...latest, percentile, label });
+      }
+      return res.status(200).json(results);
+    }
+
+    const FeeHistory = require('./models/FeeHistory');
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    for (const chain of chainSlugs) {
+      const latest = await FeeHistory.findOne({ chain }).sort({ timestamp: -1 }).lean();
+      if (!latest) continue;
+
+      const history24h = await FeeHistory.find(
+        { chain, timestamp: { $gte: twentyFourHoursAgo } },
+        { proposeGwei: 1, _id: 0 }
+      ).lean();
+
+      const { percentile, label } = computeFeePercentile(latest, history24h);
+      results.push({ ...latest, percentile, label });
+    }
+
+    return res.status(200).json(results);
+  } catch (err) {
+    console.error('[/api/fees/compare] Error:', err.message);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 });
@@ -222,6 +295,13 @@ app.post('/api/alerts', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;
     const { chain, thresholdGwei } = req.body;
+
+    // Validate chain against SUPPORTED_CHAINS
+    const validatedChain = chain || 'ethereum';
+    if (!SUPPORTED_CHAINS[validatedChain]) {
+      return res.status(400).json({ error: `Unrecognized chain "${chain}". Supported: ${Object.keys(SUPPORTED_CHAINS).join(', ')}` });
+    }
+
     if (thresholdGwei == null || typeof thresholdGwei !== 'number' || thresholdGwei <= 0) {
       return res.status(400).json({ error: 'thresholdGwei is required and must be a positive number.' });
     }
@@ -242,12 +322,14 @@ app.post('/api/alerts', authMiddleware, async (req, res) => {
     }
 
     if (!dbReady) {
-      const latestMem = memFeeHistory[memFeeHistory.length - 1];
+      // Check against the latest fee for the specific chain
+      const chainHistory = memFeeHistory.filter(d => d.chain === validatedChain);
+      const latestMem = chainHistory[chainHistory.length - 1];
       const isMemTriggered = latestMem && latestMem.proposeGwei <= thresholdGwei;
       const newAlert = {
         _id: `mem-alert-${Date.now()}`,
         userId,
-        chain: chain || 'ethereum',
+        chain: validatedChain,
         thresholdGwei,
         createdAt: new Date(),
         triggered: isMemTriggered || false,
@@ -285,12 +367,13 @@ app.post('/api/alerts', authMiddleware, async (req, res) => {
     const User = require('./models/User');
     const { sendGasAlertEmail } = require('./helpers/emailHelper');
 
-    const latestFee = await FeeHistory.findOne().sort({ timestamp: -1 }).lean();
+    // Check against the latest fee for the specific chain
+    const latestFee = await FeeHistory.findOne({ chain: validatedChain }).sort({ timestamp: -1 }).lean();
     const isTriggered = latestFee && latestFee.proposeGwei <= thresholdGwei;
 
     const alert = await UserAlert.create({
       userId,
-      chain: chain || 'ethereum',
+      chain: validatedChain,
       thresholdGwei,
       triggered: isTriggered || false,
     });
