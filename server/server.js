@@ -9,6 +9,7 @@ const { computeFeePercentile } = require('./helpers/feeHelper');
 const { SUPPORTED_CHAINS } = require('./services/etherscan');
 const authRoutes = require('./routes/authRoutes');
 const authMiddleware = require('./middleware/authMiddleware');
+const { lastLabelByChain } = require('./state/labelState');
 
 dotenv.config();
 
@@ -107,7 +108,6 @@ mongoose
 // ─── Mock Polling (offline mode) ─────────────────────────────────────────────
 function startMockPolling() {
   const cron = require('node-cron');
-  const lastLabelByChainMem = {};
   cron.schedule('*/20 * * * * *', () => {
     // Generate mock data for all chains
     for (const chain of Object.keys(SUPPORTED_CHAINS)) {
@@ -133,9 +133,9 @@ function startMockPolling() {
       const { percentile, label } = computeFeePercentile(
         doc,
         chainHistory,
-        lastLabelByChainMem[chain]
+        lastLabelByChain[chain]
       );
-      lastLabelByChainMem[chain] = label;
+      lastLabelByChain[chain] = label;
       
       const payload = { ...doc, percentile, label };
 
@@ -194,7 +194,7 @@ app.get('/api/fees/current', async (req, res) => {
       const chainHistory = memFeeHistory.filter(d => d.chain === chain);
       const latest = chainHistory[chainHistory.length - 1];
       if (!latest) return res.status(404).json({ error: 'No data yet.' });
-      const { percentile, label } = computeFeePercentile(latest, chainHistory);
+      const { percentile, label } = computeFeePercentile(latest, chainHistory, lastLabelByChain[chain]);
       return res.status(200).json({ ...latest, percentile, label });
     }
 
@@ -207,7 +207,7 @@ app.get('/api/fees/current', async (req, res) => {
       { chain, timestamp: { $gte: twentyFourHoursAgo } },
       { proposeGwei: 1, _id: 0 }
     ).lean();
-    const { percentile, label } = computeFeePercentile(latest, history24h);
+    const { percentile, label } = computeFeePercentile(latest, history24h, lastLabelByChain[chain]);
     return res.status(200).json({ ...latest, percentile, label });
   } catch (err) {
     console.error('[/api/fees/current] Error:', err.message);
@@ -251,7 +251,7 @@ app.get('/api/fees/compare', async (req, res) => {
         const chainHistory = memFeeHistory.filter(d => d.chain === chain);
         const latest = chainHistory[chainHistory.length - 1];
         if (!latest) continue;
-        const { percentile, label } = computeFeePercentile(latest, chainHistory);
+        const { percentile, label } = computeFeePercentile(latest, chainHistory, lastLabelByChain[chain]);
         results.push({ ...latest, percentile, label });
       }
       return res.status(200).json(results);
@@ -269,7 +269,7 @@ app.get('/api/fees/compare', async (req, res) => {
         { proposeGwei: 1, _id: 0 }
       ).lean();
 
-      const { percentile, label } = computeFeePercentile(latest, history24h);
+      const { percentile, label } = computeFeePercentile(latest, history24h, lastLabelByChain[chain]);
       results.push({ ...latest, percentile, label });
     }
 
