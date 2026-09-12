@@ -17,6 +17,8 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * @param {import('socket.io').Server} io  The Socket.io server instance.
  */
 function startPolling(io) {
+  const lastLabelByChain = {};
+
   const runPollCycle = async () => {
     const chainSlugs = Object.keys(SUPPORTED_CHAINS);
 
@@ -48,7 +50,13 @@ function startPolling(io) {
           { proposeGwei: 1, _id: 0 }
         ).lean();
 
-        const { percentile, label } = computeFeePercentile(doc, history24h);
+        const { percentile, label } = computeFeePercentile(
+          doc,
+          history24h,
+          lastLabelByChain[chainSlug]
+        );
+
+        lastLabelByChain[chainSlug] = label;
 
         const feePayload = {
           _id: doc._id,
