@@ -57,12 +57,12 @@ export default function FeeGauge({ feeData, livePulse }) {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 dotted-divider">
+      <div className="flex flex-col gap-3 pb-3 dotted-divider">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/60 flex items-center justify-center text-zinc-700 dark:text-zinc-300">
+          <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/60 flex items-center justify-center text-zinc-700 dark:text-zinc-300 shrink-0">
             <Gauge className="w-4 h-4" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h3 className="text-sm font-bold text-zinc-900 dark:text-white tracking-tight">
               Gas Speedometer & Tiers
             </h3>
@@ -73,74 +73,98 @@ export default function FeeGauge({ feeData, livePulse }) {
         </div>
 
         <div
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${config.badge}`}
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border self-start ${config.badge}`}
         >
           <LabelIcon className="w-3.5 h-3.5" />
           <span>{config.tag}</span>
         </div>
       </div>
 
-      {/* 3 Metric Cards (Matches the Total Assets metric cards in reference images) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+      {/* 3 Metric Cards — stacked vertically for clear readability in narrow panel */}
+      <div className="space-y-3">
         {/* Safe / Slow */}
-        <div className="shadcn-card-subtle p-4 rounded-xl relative group">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Safe Low</span>
-            <div className="w-7 h-7 rounded-md bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/60 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-              <ShieldCheck className="w-3.5 h-3.5" />
+        <div className="shadcn-card-subtle p-4 rounded-xl">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 flex items-center justify-center">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <span className="text-sm font-bold text-zinc-900 dark:text-white block leading-tight">Safe Low</span>
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Est. wait: ~3 mins</span>
+              </div>
             </div>
           </div>
-          <div className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-            {formatDisplayGwei(safeGwei)} <span className="text-xs font-normal text-zinc-500">Gwei</span>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
+              {formatDisplayGwei(safeGwei)}
+            </span>
+            <span className="text-sm font-semibold text-zinc-400 dark:text-zinc-500">Gwei</span>
           </div>
-          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">Est. wait: ~3 mins</p>
         </div>
 
-        {/* Propose / Standard */}
-        <div className="shadcn-card-subtle p-4 rounded-xl border-blue-500/30 dark:border-blue-500/40 relative group">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">Market Standard</span>
-            <div className="w-7 h-7 rounded-md bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
-              <Zap className="w-3.5 h-3.5" />
+        {/* Propose / Standard — highlighted */}
+        <div className="shadcn-card-subtle p-4 rounded-xl border-blue-500/30 dark:border-blue-500/40 bg-blue-50/40 dark:bg-blue-500/5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 flex items-center justify-center">
+                <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <span className="text-sm font-bold text-blue-700 dark:text-blue-300 block leading-tight">Standard</span>
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Est. wait: ~45 secs</span>
+              </div>
             </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-500/15 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-500/20">
+              Market
+            </span>
           </div>
-          <div className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-            {formatDisplayGwei(proposeGwei)} <span className="text-xs font-normal text-zinc-500">Gwei</span>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
+              {formatDisplayGwei(proposeGwei)}
+            </span>
+            <span className="text-sm font-semibold text-zinc-400 dark:text-zinc-500">Gwei</span>
           </div>
-          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">Est. wait: ~45 secs</p>
         </div>
 
         {/* Fast / Rapid */}
-        <div className="shadcn-card-subtle p-4 rounded-xl relative group">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Fast Priority</span>
-            <div className="w-7 h-7 rounded-md bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/60 flex items-center justify-center text-purple-600 dark:text-purple-400">
-              <Rocket className="w-3.5 h-3.5" />
+        <div className="shadcn-card-subtle p-4 rounded-xl">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 flex items-center justify-center">
+                <Rocket className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <span className="text-sm font-bold text-zinc-900 dark:text-white block leading-tight">Fast Priority</span>
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Est. wait: ~15 secs</span>
+              </div>
             </div>
           </div>
-          <div className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-            {formatDisplayGwei(fastGwei)} <span className="text-xs font-normal text-zinc-500">Gwei</span>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
+              {formatDisplayGwei(fastGwei)}
+            </span>
+            <span className="text-sm font-semibold text-zinc-400 dark:text-zinc-500">Gwei</span>
           </div>
-          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">Est. wait: ~15 secs</p>
         </div>
       </div>
 
-      {/* Clean 24h Percentile Meter (Matches the Basic Plan 70% progress meter in sidebar) */}
-      <div className="space-y-1.5 pt-1">
-        <div className="flex justify-between text-xs text-zinc-600 dark:text-zinc-300 font-medium">
-          <span>24-Hour Fee Percentile Rank</span>
-          <span className="font-bold text-zinc-900 dark:text-white">{percentile}%</span>
+      {/* 24h Percentile Meter */}
+      <div className="space-y-2 pt-2">
+        <div className="flex justify-between items-center">
+          <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">24-Hour Fee Percentile Rank</span>
+          <span className="text-base font-bold text-zinc-900 dark:text-white">{percentile}%</span>
         </div>
-        <div className="w-full h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden border border-zinc-200 dark:border-zinc-700/60">
+        <div className="w-full h-2.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden border border-zinc-200 dark:border-zinc-700/60">
           <div
             className={`h-full rounded-full ${config.barColor} transition-all duration-500`}
             style={{ width: `${Math.min(100, Math.max(5, percentile))}%` }}
           ></div>
         </div>
-        <div className="flex justify-between text-[10px] text-zinc-500 dark:text-zinc-400">
-          <span>0% (Historical Low)</span>
+        <div className="flex justify-between text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+          <span>0% (Low)</span>
           <span>50% (Median)</span>
-          <span>100% (Historical Peak)</span>
+          <span>100% (Peak)</span>
         </div>
       </div>
     </div>
