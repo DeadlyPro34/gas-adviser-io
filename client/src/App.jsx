@@ -69,6 +69,10 @@ function App() {
   const [toasts, setToasts] = useState([]);
   const toastIdRef = useRef(0);
 
+  // Notifications state
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+
   // Apply dark mode class to document
   useEffect(() => {
     if (isDark) {
@@ -184,11 +188,17 @@ function App() {
   }, [isAuthenticated]);
 
   const handleAlertTriggered = useCallback(
-    (data) => {
-      addToast(
-        `🔔 Gas Alert! Fees dropped to ${data.currentGwei} Gwei (target: ≤ ${data.thresholdGwei} Gwei).`,
-        'alert'
-      );
+    (alert) => {
+      addToast(`Gas alert triggered: Fee dropped below ${alert.thresholdGwei} Gwei!`, 'alert');
+      setNotifications((prev) => [
+        {
+          id: Date.now(),
+          text: `Gas dropped below ${alert.thresholdGwei} Gwei!`,
+          time: new Date(),
+          read: false
+        },
+        ...prev
+      ]);
     },
     [addToast]
   );
@@ -224,7 +234,7 @@ function App() {
 
   // ─── Render Dashboard if authenticated ───
   return (
-    <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 flex transition-colors duration-200 font-sans">
+    <div className="h-screen bg-[#f8f9fa] dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 flex transition-colors duration-200 font-sans overflow-hidden">
       {/* ═══ SHADCN SIDEBAR (Matches Image 1 & 2) ═══ */}
       <aside
         className={`${
@@ -384,21 +394,33 @@ function App() {
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400 px-1 pt-0.5">
-              <span className="flex items-center gap-1 hover:text-zinc-900 dark:hover:text-white cursor-pointer">
+              <a 
+                href="https://ethereum.org/en/gas/" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex items-center gap-1 hover:text-zinc-900 dark:hover:text-white cursor-pointer transition-colors"
+                title="Learn about Ethereum Gas"
+              >
                 <HelpCircle className="w-3.5 h-3.5" /> Help Center
-              </span>
-              <span className="flex items-center gap-1 hover:text-zinc-900 dark:hover:text-white cursor-pointer">
+              </a>
+              <a 
+                href="https://ethereum.org/en/developers/docs/gas/" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex items-center gap-1 hover:text-zinc-900 dark:hover:text-white cursor-pointer transition-colors"
+                title="Read Technical Documentation"
+              >
                 <BookOpen className="w-3.5 h-3.5" /> Docs
-              </span>
+              </a>
             </div>
           </div>
         )}
       </aside>
 
       {/* ═══ MAIN WORKSPACE ═══ */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* ═══ TOP NAVBAR (Matches Image 1 & 2) ═══ */}
-        <header className="sticky top-0 z-30 bg-white/90 dark:bg-[#0c0c0e]/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 px-4 sm:px-6 py-2.5">
+        <header className="shrink-0 z-30 bg-white/90 dark:bg-[#0c0c0e]/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 px-4 sm:px-6 py-2.5">
           <div className="flex items-center justify-between gap-4">
             {/* Left: Sidebar Toggle + Search */}
             <div className="flex items-center gap-3 flex-1 max-w-md">
@@ -431,16 +453,68 @@ function App() {
                 {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-zinc-700" />}
               </button>
 
-              {/* Notification Bell with Badge */}
+              {/* Notification Bell with Badge & Dropdown */}
               <div className="relative">
                 <button
-                  onClick={() => navigate('dashboard')}
-                  className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                  onClick={() => {
+                    setShowNotifications(!showNotifications);
+                    // Mark as read when opened
+                    if (!showNotifications) {
+                      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                    }
+                  }}
+                  className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer relative"
                   title="Notifications"
                 >
                   <Bell className="w-4 h-4" />
+                  {notifications.filter(n => !n.read).length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#0c0c0e]"></span>
+                  )}
                 </button>
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#0c0c0e]"></span>
+
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#0c0c0e] border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl z-[100] overflow-hidden">
+                    <div className="p-3 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900/50">
+                      <span className="font-bold text-sm text-zinc-900 dark:text-white">Notifications</span>
+                      {notifications.length > 0 && (
+                        <span className="text-[10px] bg-rose-100 text-rose-600 dark:bg-rose-500/20 px-1.5 py-0.5 rounded font-bold">
+                          {notifications.length} Total
+                        </span>
+                      )}
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-6 text-center text-xs text-zinc-500 dark:text-zinc-400">
+                          <Bell className="w-6 h-6 mx-auto mb-2 text-zinc-300 dark:text-zinc-700" />
+                          <p>No new notifications.</p>
+                          <p className="mt-1">Active alerts will appear here.</p>
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
+                          {notifications.map(n => (
+                            <div key={n.id} className="p-3 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors flex gap-3 items-start">
+                              <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-200 dark:border-emerald-500/20">
+                                <Bell className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                              </div>
+                              <div>
+                                <p className="text-xs text-zinc-800 dark:text-zinc-200 font-medium leading-tight">{n.text}</p>
+                                <p className="text-[10px] text-zinc-500 mt-1">{n.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-2 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
+                      <button 
+                        onClick={() => { setShowNotifications(false); navigate('alerts'); }} 
+                        className="w-full py-1.5 rounded-lg text-xs text-center text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white font-medium transition-colors cursor-pointer"
+                      >
+                        Manage Alerts
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Socket.io Live Status Pill */}
@@ -522,8 +596,10 @@ function App() {
           </div>
         )}
 
+        {/* ═══ SCROLLABLE CONTENT WRAPPER ═══ */}
+        <div className="flex flex-1 overflow-hidden">
         {/* ═══ MAIN PAGE BODY ═══ */}
-        <main className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1400px] w-full mx-auto flex-1">
+        <main className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1400px] w-full mx-auto flex-1 overflow-y-auto">
           {currentView === 'profile' ? (
             <ProfilePage onNavigate={navigate} alertsCount={0} />
           ) : (
@@ -555,7 +631,11 @@ function App() {
                   </button>
 
                   <button
-                    onClick={() => handleTimeframeChange(historyHours === 24 ? 12 : 24)}
+                    onClick={() => {
+                      const options = [1, 6, 12, 24];
+                      const nextIndex = (options.indexOf(historyHours) + 1) % options.length;
+                      handleTimeframeChange(options[nextIndex]);
+                    }}
                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/80 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold text-xs transition-colors cursor-pointer"
                   >
                     <Calendar className="w-3.5 h-3.5 text-zinc-400" />
@@ -597,19 +677,14 @@ function App() {
                 </a>
               </div>
 
-              {/* ─── Primary Grid: FeeChart + Speedometer Tiers ─── */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5" id="trends">
-                <div className="lg:col-span-7 xl:col-span-8">
+              {/* ─── Primary Grid: FeeChart (full width since FeeGauge moved to right panel) ─── */}
+              <div id="trends">
                   <FeeChart
                     historyData={historyData}
                     onTimeframeChange={handleTimeframeChange}
                     currentHours={historyHours}
                     isDark={isDark}
                   />
-                </div>
-                <div className="lg:col-span-5 xl:col-span-4" id="speedometer">
-                  <FeeGauge feeData={currentFee} livePulse={livePulse} />
-                </div>
               </div>
 
               {/* ─── Middle 3 Metric Cards ─── */}
@@ -779,8 +854,16 @@ function App() {
           )}
         </main>
 
+        {/* ═══ FIXED RIGHT PANEL (Speedometer / FeeGauge) ═══ */}
+        <aside className="hidden lg:flex flex-col shrink-0 w-[320px] xl:w-[360px] h-full border-l border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#0c0c0e] overflow-y-auto" id="speedometer">
+          <div className="p-4 space-y-4">
+            <FeeGauge feeData={currentFee} livePulse={livePulse} />
+          </div>
+        </aside>
+        </div>
+
         {/* ═══ FOOTER ═══ */}
-        <footer className="border-t border-zinc-200 dark:border-zinc-800 py-4 px-6 bg-white dark:bg-[#0c0c0e] text-center text-xs text-zinc-500 dark:text-zinc-400">
+        <footer className="shrink-0 border-t border-zinc-200 dark:border-zinc-800 py-4 px-6 bg-white dark:bg-[#0c0c0e] text-center text-xs text-zinc-500 dark:text-zinc-400">
           Gas Adviser &copy; {new Date().getFullYear()} &nbsp;·&nbsp; Professional DeFi Fee & Timing Predictor &nbsp;·&nbsp; Shadcn Design System
         </footer>
       </div>
