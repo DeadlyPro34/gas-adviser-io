@@ -9,7 +9,7 @@ const CHAINS = [
   { slug: 'base',     name: 'Base' },
 ];
 
-export default function AlertManager({ socket, proposeGwei, onAlertTriggered }) {
+export default function AlertManager({ socket, chainFees = [], onAlertTriggered }) {
   const [alerts, setAlerts] = useState([]);
   const [thresholdInput, setThresholdInput] = useState('');
   const [chainInput, setChainInput] = useState('ethereum');
@@ -81,17 +81,22 @@ export default function AlertManager({ socket, proposeGwei, onAlertTriggered }) 
   };
 
   // ─── LAYER 2: Smart Default — set alert at ~80% of current gas price ───
+  // Compute smart suggestion value based on the CURRENTLY SELECTED chain
+  const selectedChainFee = chainFees.find(c => c.chain === chainInput) || null;
+  const currentProposeGwei = selectedChainFee ? selectedChainFee.proposeGwei : null;
+  const smartSuggestion = currentProposeGwei ? Math.round(currentProposeGwei * 0.8 * 10) / 10 : null;
+
   const handleSmartDefault = async () => {
-    const smartThreshold = Math.round(proposeGwei * 0.8 * 10) / 10;
+    if (!smartSuggestion) return;
     setLoading(true);
     setError(null);
     try {
       const res = await axios.post('/api/alerts', {
         chain: chainInput,
-        thresholdGwei: smartThreshold,
+        thresholdGwei: smartSuggestion,
       });
       const chainName = CHAINS.find(c => c.slug === chainInput)?.name || chainInput;
-      setSuccess(`Smart alert set for ${chainName} ≤ ${smartThreshold} Gwei!`);
+      setSuccess(`Smart alert set for ${chainName} ≤ ${smartSuggestion} Gwei!`);
       setAlerts((prev) => [res.data, ...prev]);
       setNudgeDismissed(true);
     } catch (err) {
@@ -110,9 +115,6 @@ export default function AlertManager({ socket, proposeGwei, onAlertTriggered }) 
       console.error('Failed to delete alert:', err);
     }
   };
-
-  // Compute smart suggestion value
-  const smartSuggestion = Math.round(proposeGwei * 0.8 * 10) / 10;
 
   return (
     <div className="shadcn-card p-6 space-y-5">
@@ -153,18 +155,23 @@ export default function AlertManager({ socket, proposeGwei, onAlertTriggered }) 
                 Don't miss cheap gas!
               </h4>
               <p className="text-xs text-amber-700/80 dark:text-amber-400/70 mt-1 leading-relaxed">
-                You have no alerts configured. Gas prices fluctuate constantly — set an alert so you never miss a drop. We recommend <span className="font-bold text-amber-800 dark:text-amber-300">≤ {smartSuggestion} Gwei</span> based on current conditions.
+                You have no alerts configured. Gas prices fluctuate constantly — set an alert so you never miss a drop.
+                {smartSuggestion ? (
+                  <> We recommend <span className="font-bold text-amber-800 dark:text-amber-300">≤ {smartSuggestion} Gwei</span> for {CHAINS.find(c => c.slug === chainInput)?.name} based on current conditions.</>
+                ) : (
+                  <> Select a chain to see our smart recommendation.</>
+                )}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 pl-11">
             <button
               onClick={handleSmartDefault}
-              disabled={loading}
+              disabled={loading || !smartSuggestion}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-zinc-950 text-xs font-bold shadow-sm transition-all cursor-pointer disabled:opacity-50"
             >
               <Zap className="w-3.5 h-3.5" />
-              Enable Smart Alert ({smartSuggestion} Gwei)
+              {!smartSuggestion ? 'Loading chain data...' : `Enable Smart Alert (${smartSuggestion} Gwei)`}
             </button>
             <button
               onClick={() => setNudgeDismissed(true)}
