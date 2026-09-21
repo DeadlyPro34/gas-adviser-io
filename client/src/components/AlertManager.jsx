@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Bell, Plus, Trash2, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Bell, Plus, Trash2, CheckCircle2, RefreshCw, Zap, Lightbulb, ChevronDown } from 'lucide-react';
 
-export default function AlertManager({ socket, proposeGwei, onAlertTriggered }) {
+const CHAINS = [
+  { slug: 'ethereum', name: 'Ethereum' },
+  { slug: 'polygon',  name: 'Polygon' },
+  { slug: 'arbitrum', name: 'Arbitrum' },
+  { slug: 'base',     name: 'Base' },
+];
+
+export default function AlertManager({ socket, chainFees = [], onAlertTriggered }) {
   const [alerts, setAlerts] = useState([]);
   const [thresholdInput, setThresholdInput] = useState('');
+  const [chainInput, setChainInput] = useState('ethereum');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
 
   // Fetch active alerts
   const fetchAlerts = async () => {
@@ -56,15 +65,42 @@ export default function AlertManager({ socket, proposeGwei, onAlertTriggered }) 
     setLoading(true);
     try {
       const res = await axios.post('/api/alerts', {
-        chain: 'ethereum',
+        chain: chainInput,
         thresholdGwei: val,
       });
 
-      setSuccess(`Alert set for ≤ ${val} Gwei!`);
+      const chainName = CHAINS.find(c => c.slug === chainInput)?.name || chainInput;
+      setSuccess(`Alert set for ${chainName} ≤ ${val} Gwei!`);
       setThresholdInput('');
       setAlerts((prev) => [res.data, ...prev]);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create alert.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── LAYER 2: Smart Default — set alert at ~80% of current gas price ───
+  // Compute smart suggestion value based on the CURRENTLY SELECTED chain
+  const selectedChainFee = chainFees.find(c => c.chain === chainInput) || null;
+  const currentProposeGwei = selectedChainFee ? selectedChainFee.proposeGwei : null;
+  const smartSuggestion = currentProposeGwei ? Math.round(currentProposeGwei * 0.8 * 10) / 10 : null;
+
+  const handleSmartDefault = async () => {
+    if (!smartSuggestion) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.post('/api/alerts', {
+        chain: chainInput,
+        thresholdGwei: smartSuggestion,
+      });
+      const chainName = CHAINS.find(c => c.slug === chainInput)?.name || chainInput;
+      setSuccess(`Smart alert set for ${chainName} ≤ ${smartSuggestion} Gwei!`);
+      setAlerts((prev) => [res.data, ...prev]);
+      setNudgeDismissed(true);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to create smart alert.');
     } finally {
       setLoading(false);
     }
@@ -107,9 +143,63 @@ export default function AlertManager({ socket, proposeGwei, onAlertTriggered }) 
         </button>
       </div>
 
+      {/* ─── LAYER 2: Smart Nudge Banner ─── */}
+      {alerts.length === 0 && !nudgeDismissed && (
+        <div className="relative rounded-xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/5 p-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center shrink-0 mt-0.5">
+              <Lightbulb className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-amber-800 dark:text-amber-300">
+                Don't miss cheap gas!
+              </h4>
+              <p className="text-xs text-amber-700/80 dark:text-amber-400/70 mt-1 leading-relaxed">
+                You have no alerts configured. Gas prices fluctuate constantly — set an alert so you never miss a drop.
+                {smartSuggestion ? (
+                  <> We recommend <span className="font-bold text-amber-800 dark:text-amber-300">≤ {smartSuggestion} Gwei</span> for {CHAINS.find(c => c.slug === chainInput)?.name} based on current conditions.</>
+                ) : (
+                  <> Select a chain to see our smart recommendation.</>
+                )}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 pl-11">
+            <button
+              onClick={handleSmartDefault}
+              disabled={loading || !smartSuggestion}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-zinc-950 text-xs font-bold shadow-sm transition-all cursor-pointer disabled:opacity-50"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              {!smartSuggestion ? 'Loading chain data...' : `Enable Smart Alert (${smartSuggestion} Gwei)`}
+            </button>
+            <button
+              onClick={() => setNudgeDismissed(true)}
+              className="px-3 py-2 rounded-lg text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/10 transition-colors cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Form */}
       <form onSubmit={handleCreateAlert} className="space-y-3">
         <div className="flex gap-3">
+          {/* Chain Selector */}
+          <div className="relative shrink-0">
+            <select
+              value={chainInput}
+              onChange={(e) => setChainInput(e.target.value)}
+              className="appearance-none bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-3 pr-8 text-sm font-bold focus:outline-none cursor-pointer h-full"
+            >
+              {CHAINS.map(c => (
+                <option key={c.slug} value={c.slug}>{c.name}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
+          </div>
+
           <div className="relative flex-1">
             <input
               type="number"

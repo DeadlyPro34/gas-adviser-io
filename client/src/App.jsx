@@ -27,7 +27,8 @@ import {
   Layers,
   HelpCircle,
   BookOpen,
-  ArrowUpRight
+  ArrowUpRight,
+  Zap
 } from 'lucide-react';
 
 import { useAuth } from './context/AuthContext';
@@ -41,6 +42,7 @@ import FeeChart from './components/FeeChart';
 import Recommendation from './components/Recommendation';
 import TxCostCalculator from './components/TxCostCalculator';
 import AlertManager from './components/AlertManager';
+import ChainCompare from './components/ChainCompare';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? undefined : 'http://localhost:5000');
 
@@ -59,7 +61,8 @@ function App() {
   // Dashboard state
   const [health, setHealth] = useState(null);
   const [healthLoading, setHealthLoading] = useState(true);
-  const [currentFee, setCurrentFee] = useState(null);
+  const [currentFee, setCurrentFee] = useState(null); // Ethereum current fee (for gauge/advisor/calc)
+  const [chainFees, setChainFees] = useState([]); // All chains (for Compare & Alerts)
   const [historyData, setHistoryData] = useState([]);
   const [historyHours, setHistoryHours] = useState(24);
   const [socket, setSocket] = useState(null);
@@ -72,6 +75,9 @@ function App() {
   // Notifications state
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+
+  // Smart Auto-Advisory state (Layer 1)
+  const smartAlertCooldownRef = useRef(null);
 
   // Apply dark mode class to document
   useEffect(() => {
@@ -139,6 +145,13 @@ function App() {
     } catch (err) {}
   };
 
+  const fetchCompare = async () => {
+    try {
+      const res = await axios.get('/api/fees/compare');
+      setChainFees(res.data);
+    } catch (err) {}
+  };
+
   const fetchHistory = async (hours) => {
     try {
       const res = await axios.get(`/api/fees/history?hours=${hours}`);
@@ -169,6 +182,7 @@ function App() {
 
     checkHealth();
     fetchCurrentFee();
+    fetchCompare();
     fetchHistory(historyHours);
 
     const newSocket = socketIOClient(SOCKET_URL);
@@ -177,10 +191,24 @@ function App() {
     newSocket.on('connect', () => setSocketConnected(true));
     newSocket.on('disconnect', () => setSocketConnected(false));
     newSocket.on('feeUpdate', (data) => {
-      setCurrentFee(data);
-      setHistoryData((prev) => [...prev, data]);
-      setLivePulse(true);
-      setTimeout(() => setLivePulse(false), 1200);
+      // If it's Ethereum, update the specific Ethereum state used by other components
+      if (data.chain === 'ethereum' || !data.chain) {
+        setCurrentFee(data);
+        setHistoryData((prev) => [...prev, data]);
+        setLivePulse(true);
+        setTimeout(() => setLivePulse(false), 1200);
+      }
+      
+      // Always update the multi-chain state
+      setChainFees((prev) => {
+        const idx = prev.findIndex((c) => c.chain === data.chain);
+        if (idx >= 0) {
+          const updated = [...prev];
+          updated[idx] = data;
+          return updated;
+        }
+        return [...prev, data];
+      });
     });
 
     return () => newSocket.disconnect();
@@ -213,6 +241,38 @@ function App() {
   };
 
   const greeting = getGreeting();
+
+  // ─── LAYER 1: Smart Auto-Advisory ──────────────────────────────────────────
+  // Compares current gas price against rolling average of historical data.
+  // Auto-fires a notification when gas drops 30%+ below the average.
+  useEffect(() => {
+    if (!currentFee?.proposeGwei || historyData.length < 5) return;
+
+    const avgGwei = historyData.reduce((sum, d) => sum + (d.proposeGwei || 0), 0) / historyData.length;
+    const currentGwei = currentFee.proposeGwei;
+    const dropPercent = ((avgGwei - currentGwei) / avgGwei) * 100;
+
+    // Only trigger if gas is 30%+ below average and we haven't notified recently (10 min cooldown)
+    if (dropPercent >= 30) {
+      const now = Date.now();
+      if (smartAlertCooldownRef.current && (now - smartAlertCooldownRef.current) < 10 * 60 * 1000) return;
+      smartAlertCooldownRef.current = now;
+
+      const roundedDrop = Math.round(dropPercent);
+      const message = `⚡ Gas is ${roundedDrop}% cheaper than the ${historyHours}h average! Now: ${currentGwei} Gwei (avg: ${avgGwei.toFixed(1)} Gwei)`;
+      addToast(message, 'alert');
+      setNotifications((prev) => [
+        {
+          id: Date.now(),
+          text: `Gas is ${roundedDrop}% below average — only ${currentGwei} Gwei right now!`,
+          time: new Date(),
+          read: false,
+          type: 'smart'
+        },
+        ...prev
+      ]);
+    }
+  }, [currentFee, historyData, historyHours, addToast]);
 
   // ─── Render Auth Pages if not authenticated ───
   if (authLoading) {
@@ -493,12 +553,31 @@ function App() {
                         <div className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
                           {notifications.map(n => (
                             <div key={n.id} className="p-3 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors flex gap-3 items-start">
-                              <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-200 dark:border-emerald-500/20">
-                                <Bell className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border ${
+                                n.type === 'smart'
+                                  ? 'bg-violet-100 dark:bg-violet-500/10 border-violet-200 dark:border-violet-500/20'
+                                  : 'bg-emerald-100 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20'
+                              }`}>
+                                {n.type === 'smart' ? (
+                                  <Zap className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                                ) : (
+                                  <Bell className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                )}
                               </div>
                               <div>
-                                <p className="text-xs text-zinc-800 dark:text-zinc-200 font-medium leading-tight">{n.text}</p>
-                                <p className="text-[10px] text-zinc-500 mt-1">{n.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-xs text-zinc-800 dark:text-zinc-200 font-medium leading-tight">{n.text}</p>
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                                    n.type === 'smart'
+                                      ? 'bg-violet-100 text-violet-600 dark:bg-violet-500/15 dark:text-violet-400'
+                                      : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400'
+                                  }`}>
+                                    {n.type === 'smart' ? 'AUTO' : 'ALERT'}
+                                  </span>
+                                  <p className="text-[10px] text-zinc-500">{n.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -770,10 +849,15 @@ function App() {
                 <div id="alerts">
                   <AlertManager
                     socket={socket}
-                    proposeGwei={currentFee?.proposeGwei || 20}
+                    chainFees={chainFees}
                     onAlertTriggered={handleAlertTriggered}
                   />
                 </div>
+              </div>
+
+              {/* ─── Multi-Chain Comparison ─── */}
+              <div id="chain-compare">
+                <ChainCompare socket={socket} chainFees={chainFees} onRefresh={fetchCompare} />
               </div>
 
               {/* ─── Backend Status Panel ─── */}
